@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>复核清单 - 古籍修复工作室</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>古籍修复工作室</h1>
+      <div class="meta">修复项目复核管理</div>
+    </div>
+    <select id="viewer"></select>
+  </header>
+  <nav class="tabs" style="padding: 0 28px;">
+    <a href="/">修复项目</a>
+    <a href="/intakes.html">入库接收登记</a>
+    <a href="/materials.html">材料库存台账</a>
+    <a href="/review.html" class="active">复核清单</a>
+  </nav>
+  <main>
+    <section style="grid-column: 1 / -1;">
+      <div id="reviewStats" class="stats"></div>
+      <div id="noPermission" style="display:none; background:#fff; border:1px solid var(--line); border-radius:8px; padding:40px; text-align:center;">
+        <h2 style="margin:0 0 10px;">无权限访问</h2>
+        <p style="color:#6b6258; margin:0;">复核清单仅管理员可访问，请切换管理员账号</p>
+      </div>
+      <div id="emptyState" style="display:none; background:#fff; border:1px solid var(--line); border-radius:8px; padding:40px; text-align:center;">
+        <h2 style="margin:0 0 10px;">暂无待复核项目</h2>
+        <p style="color:#6b6258; margin:0;">所有修复项目完成后将提交至此处进行复核</p>
+      </div>
+      <div id="reviewList" class="grid"></div>
+    </section>
+  </main>
+
+  <div id="reviewModal" class="modal" style="display:none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">项目复核</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="projectInfo"></div>
+        <label>复核意见</label>
+        <textarea id="reviewOpinion" placeholder="请填写详细的复核意见，包括修复质量、材料使用、步骤完整性等方面的评价"></textarea>
+        <div class="modal-actions">
+          <button id="rejectBtn" class="secondary">退回修改</button>
+          <button id="approveBtn">通过复核</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/review.js"></script>
+</body>
+</html>

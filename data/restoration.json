@@ -28,7 +28,8 @@
       "dueDate": "2026-06-22",
       "status": "进行中",
       "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      "updatedAt": "2026-06-11"
+      "updatedAt": "2026-06-11",
+      "reviewRecords": []
     },
     {
       "id": "R-002",
@@ -39,9 +40,32 @@
       "materials": "棉线、宣纸",
       "owner": "严澈",
       "dueDate": "2026-06-12",
-      "status": "待复核",
+      "status": "已完成",
       "photos": "",
-      "updatedAt": "2026-06-10"
+      "updatedAt": "2026-06-13",
+      "reviewRecords": [
+        {
+          "reviewer": "管理员",
+          "reviewerId": "u-admin",
+          "opinion": "修复质量良好，步骤完整，材料使用合理，符合修复规范。",
+          "result": "通过",
+          "reviewedAt": "2026-06-13"
+        },
+        {
+          "reviewer": "管理员",
+          "reviewerId": "u-admin",
+          "opinion": "书脊重装处仍有缝隙，需要重新加固；水渍区域清洁不彻底，请返工。",
+          "result": "退回",
+          "reviewedAt": "2026-06-13"
+        },
+        {
+          "reviewer": "管理员",
+          "reviewerId": "u-admin",
+          "opinion": "修复质量良好，书脊重装牢固，水渍清洁彻底，材料使用合理，符合古籍修复规范。",
+          "result": "通过",
+          "reviewedAt": "2026-06-13"
+        }
+      ]
     }
   ],
   "intakes": [

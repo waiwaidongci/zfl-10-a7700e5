@@ -11,6 +11,7 @@ export async function handleProjects(req, res, db, pathname) {
       id: `R-${Date.now()}`,
       status: "进行中",
       updatedAt: new Date().toISOString().slice(0, 10),
+      reviewRecords: [],
       ...input
     };
     db.projects.unshift(project);

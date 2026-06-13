@@ -13,8 +13,8 @@ const seed = {
     { id: "u-yan", name: "严澈", role: "worker" }
   ],
   projects: [
-    { id: "R-001", title: "明代族谱散页", era: "明代", damage: "虫蛀、边角缺失", steps: "清洁、补纸、压平", materials: "楮皮纸、小麦淀粉浆", owner: "顾眉", dueDate: "2026-06-22", status: "进行中", photos: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f", updatedAt: "2026-06-11" },
-    { id: "R-002", title: "清刻本医书", era: "清代", damage: "水渍、书脊松散", steps: "拆线、干洗、重装", materials: "棉线、宣纸", owner: "严澈", dueDate: "2026-06-12", status: "待复核", photos: "", updatedAt: "2026-06-10" }
+    { id: "R-001", title: "明代族谱散页", era: "明代", damage: "虫蛀、边角缺失", steps: "清洁、补纸、压平", materials: "楮皮纸、小麦淀粉浆", owner: "顾眉", dueDate: "2026-06-22", status: "进行中", photos: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f", updatedAt: "2026-06-11", reviewRecords: [] },
+    { id: "R-002", title: "清刻本医书", era: "清代", damage: "水渍、书脊松散", steps: "拆线、干洗、重装", materials: "棉线、宣纸", owner: "严澈", dueDate: "2026-06-12", status: "待复核", photos: "", updatedAt: "2026-06-10", reviewRecords: [] }
   ],
   intakes: [
     { id: "I-001", title: "宋版文选残卷", era: "宋代", source: "私人捐赠", receiver: "顾眉", receivedAt: "2026-06-10", damage: "封面缺失、书页霉斑", tempLocation: "A柜-3层", status: "待修复", createdAt: "2026-06-10" },
@@ -40,6 +40,14 @@ export async function loadDb() {
     if (!(key in db)) {
       db[key] = JSON.parse(JSON.stringify(seed[key]));
       changed = true;
+    }
+  }
+  if (db.projects) {
+    for (const project of db.projects) {
+      if (!project.reviewRecords) {
+        project.reviewRecords = [];
+        changed = true;
+      }
     }
   }
   if (changed) await writeFile(dbPath, JSON.stringify(db, null, 2));
