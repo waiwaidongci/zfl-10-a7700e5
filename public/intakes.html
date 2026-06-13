@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>入库接收登记 - 古籍修复工作室</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>古籍修复工作室</h1>
+      <div class="meta">入库接收、登记管理、临时存放</div>
+    </div>
+  </header>
+  <nav class="tabs" style="padding: 0 28px;">
+    <a href="/">修复项目</a>
+    <a href="/intakes.html" class="active">入库接收登记</a>
+  </nav>
+  <main>
+    <form id="intakeForm">
+      <h2>新增入库登记</h2>
+      <label>藏品名称</label><input name="title" required>
+      <label>年代</label><input name="era">
+      <label>藏品来源</label><input name="source" required>
+      <label>接收人</label><input name="receiver" required>
+      <label>接收时间</label><input name="receivedAt" type="date" required>
+      <label>初始破损描述</label><textarea name="damage" required></textarea>
+      <label>临时存放位置</label><input name="tempLocation" required>
+      <button>登记入库</button>
+    </form>
+    <section>
+      <div class="stats" id="stats"></div>
+      <div class="grid" id="intakes"></div>
+    </section>
+  </main>
+  <script src="/js/intakes.js"></script>
+</body>
+</html>

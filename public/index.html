@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>古籍修复工作室</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>古籍修复工作室</h1>
+      <div class="meta">项目接收、过程记录、负责人工作量</div>
+    </div>
+    <select id="viewer"></select>
+  </header>
+  <nav class="tabs" style="padding: 0 28px;">
+    <a href="/" class="active">修复项目</a>
+    <a href="/intakes.html">入库接收登记</a>
+  </nav>
+  <main>
+    <form id="form">
+      <h2>新增修复项目</h2>
+      <div class="intake-select">
+        <label>从入库记录选择</label>
+        <select id="intakeSelect" name="intakeId"></select>
+        <div class="intake-info" id="intakeInfo" style="display:none;"></div>
+      </div>
+      <label>藏品名称</label><input name="title" required>
+      <label>年代</label><input name="era" required>
+      <label>破损类型</label><input name="damage" required>
+      <label>修复步骤</label><textarea name="steps" required></textarea>
+      <label>使用材料</label><textarea name="materials" required></textarea>
+      <label>负责人</label><input name="owner" required>
+      <label>预计完成日期</label><input name="dueDate" type="date" required>
+      <label>照片链接</label><input name="photos">
+      <button>保存项目</button>
+    </form>
+    <section>
+      <div class="stats" id="stats"></div>
+      <div class="grid" id="projects"></div>
+    </section>
+  </main>
+  <script src="/js/projects.js"></script>
+</body>
+</html>
