@@ -46,18 +46,6 @@
   ],
   "intakes": [
     {
-      "id": "I-1781387466162",
-      "status": "待修复",
-      "createdAt": "2026-06-13",
-      "title": "清乾隆版地方志",
-      "era": "清代",
-      "source": "博物馆征集",
-      "receiver": "顾眉",
-      "receivedAt": "2026-06-14",
-      "damage": "封面破损、书脊脱胶、内页黄斑",
-      "tempLocation": "C柜-2层"
-    },
-    {
       "id": "I-001",
       "title": "宋版文选残卷",
       "era": "宋代",
@@ -80,6 +68,48 @@
       "tempLocation": "B柜-1层",
       "status": "待修复",
       "createdAt": "2026-06-12"
+    }
+  ],
+  "materials": [
+    {
+      "id": "M-1781389308894",
+      "name": "测试材料",
+      "unit": "个",
+      "quantity": 50,
+      "lowStockThreshold": 10,
+      "updatedAt": "2026-06-13"
+    },
+    {
+      "id": "M-001",
+      "name": "楮皮纸",
+      "unit": "张",
+      "quantity": 500,
+      "lowStockThreshold": 100,
+      "updatedAt": "2026-06-10"
+    },
+    {
+      "id": "M-002",
+      "name": "宣纸",
+      "unit": "张",
+      "quantity": 300,
+      "lowStockThreshold": 80,
+      "updatedAt": "2026-06-11"
+    },
+    {
+      "id": "M-003",
+      "name": "小麦淀粉浆",
+      "unit": "克",
+      "quantity": 2000,
+      "lowStockThreshold": 500,
+      "updatedAt": "2026-06-09"
+    },
+    {
+      "id": "M-004",
+      "name": "棉线",
+      "unit": "米",
+      "quantity": 150,
+      "lowStockThreshold": 30,
+      "updatedAt": "2026-06-12"
     }
   ]
 }

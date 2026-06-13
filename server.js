@@ -9,6 +9,7 @@ import { loadDb, sendJson } from "./src/db.js";
 import { handleUsers } from "./src/routes/users.js";
 import { handleProjects } from "./src/routes/projects.js";
 import { handleIntakes } from "./src/routes/intakes.js";
+import { handleMaterials } from "./src/routes/materials.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "public");
@@ -60,6 +61,10 @@ const server = http.createServer(async (req, res) => {
       }
       if (pathname.startsWith("/api/intakes")) {
         const handled = await handleIntakes(req, res, db, pathname);
+        if (handled !== false) return;
+      }
+      if (pathname.startsWith("/api/materials")) {
+        const handled = await handleMaterials(req, res, db, pathname);
         if (handled !== false) return;
       }
       return sendJson(res, 404, { error: "not_found" });

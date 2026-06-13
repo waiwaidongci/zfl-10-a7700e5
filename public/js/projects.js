@@ -4,10 +4,13 @@ const projectsEl = document.querySelector("#projects");
 const statsEl = document.querySelector("#stats");
 const intakeSelect = document.querySelector("#intakeSelect");
 const intakeInfo = document.querySelector("#intakeInfo");
+const materialCheckboxes = document.querySelector("#materialCheckboxes");
+const stockHint = document.querySelector("#stockHint");
 
 let users = [];
 let projects = [];
 let intakes = [];
+let materials = [];
 
 async function api(path, options) {
   const res = await fetch(path, options && options.body ? { ...options, headers: { "Content-Type": "application/json" } } : options);
@@ -96,15 +99,90 @@ function onIntakeChange() {
   intakeInfo.style.display = 'block';
 }
 
+function renderMaterialCheckboxes() {
+  if (materials.length === 0) {
+    materialCheckboxes.innerHTML = '<span style="font-size: 13px; color: #6b6258;">暂无库存材料</span>';
+    return;
+  }
+  materialCheckboxes.innerHTML = materials.map((m) => {
+    const low = m.quantity <= m.lowStockThreshold;
+    const cls = low ? 'low-stock' : '';
+    return (
+      '<label class="' + cls + '">' +
+      '<input type="checkbox" value="' + m.id + '" data-name="' + m.name + '">' +
+      m.name + '（' + m.quantity + m.unit + '）' +
+      '</label>'
+    );
+  }).join('');
+
+  materialCheckboxes.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    cb.onchange = onMaterialChange;
+  });
+}
+
+function onMaterialChange() {
+  const selected = [];
+  const selectedMaterials = [];
+
+  materialCheckboxes.querySelectorAll('input[type="checkbox"]:checked').forEach((cb) => {
+    const material = materials.find((m) => m.id === cb.value);
+    if (material) {
+      selected.push(material.name);
+      selectedMaterials.push(material);
+    }
+  });
+
+  if (selected.length > 0) {
+    const currentValue = form.materials.value;
+    if (!currentValue || currentValue.trim() === '') {
+      form.materials.value = selected.join('、');
+    } else {
+      const existingMaterials = currentValue.split(/[、,，]/).map(s => s.trim()).filter(s => s);
+      const merged = [...new Set([...existingMaterials, ...selected])];
+      form.materials.value = merged.join('、');
+    }
+  }
+
+  updateStockHint(selectedMaterials);
+}
+
+function updateStockHint(selectedMaterials) {
+  if (selectedMaterials.length === 0) {
+    stockHint.style.display = 'none';
+    return;
+  }
+
+  const lowStockItems = selectedMaterials.filter(m => m.quantity <= m.lowStockThreshold);
+
+  let html = '<b>已选材料库存：</b><br>';
+  selectedMaterials.forEach((m) => {
+    const low = m.quantity <= m.lowStockThreshold;
+    html += '· ' + m.name + '：' + m.quantity + m.unit;
+    if (low) {
+      html += ' <span class="low">（库存不足）</span>';
+    }
+    html += '<br>';
+  });
+
+  if (lowStockItems.length > 0) {
+    html += '<br><span class="low">注意：有 ' + lowStockItems.length + ' 种材料库存不足，请及时补充</span>';
+  }
+
+  stockHint.innerHTML = html;
+  stockHint.style.display = 'block';
+}
+
 async function load() {
   users = await api("/api/users");
   projects = await api("/api/projects");
   intakes = await api("/api/intakes");
+  materials = await api("/api/materials");
 
   viewer.innerHTML = users.map((u) => '<option value="' + u.id + '">' + u.name + ' · ' + u.role + '</option>').join("");
   if (!viewer.value) viewer.value = users[0].id;
 
   renderIntakeOptions();
+  renderMaterialCheckboxes();
   render();
 }
 
@@ -118,6 +196,7 @@ form.onsubmit = async (event) => {
   await api("/api/projects", { method: "POST", body: JSON.stringify(data) });
   form.reset();
   intakeInfo.style.display = 'none';
+  stockHint.style.display = 'none';
   await load();
 };
 
