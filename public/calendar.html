@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>负责人排期日历 - 古籍修复工作室</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>古籍修复工作室</h1>
+      <div class="meta">负责人排期日历 · 按周查看项目进度</div>
+    </div>
+    <select id="viewer"></select>
+  </header>
+  <nav class="tabs" style="padding: 0 28px;">
+    <a href="/">修复项目</a>
+    <a href="/intakes.html">入库接收登记</a>
+    <a href="/materials.html">材料库存台账</a>
+    <a href="/review.html">复核清单</a>
+    <a href="/calendar.html" class="active">排期日历</a>
+  </nav>
+  <main class="calendar-main">
+    <section class="calendar-controls">
+      <div class="calendar-stats" id="calendarStats"></div>
+      <div class="calendar-toolbar">
+        <label>显示周数
+          <select id="weeksSelect">
+            <option value="2">2 周</option>
+            <option value="4">4 周</option>
+            <option value="6" selected>6 周</option>
+            <option value="8">8 周</option>
+          </select>
+        </label>
+        <button id="todayBtn" class="secondary">回到本周</button>
+      </div>
+      <div class="calendar-legend">
+        <span class="legend-item"><span class="legend-dot active"></span>进行中</span>
+        <span class="legend-item"><span class="legend-dot pending"></span>待复核</span>
+        <span class="legend-item"><span class="legend-dot overdue"></span>逾期</span>
+        <span class="legend-item"><span class="legend-dot done"></span>已完成</span>
+      </div>
+    </section>
+    <section class="calendar-weeks" id="calendarWeeks"></section>
+  </main>
+  <script src="/js/calendar.js"></script>
+</body>
+</html>

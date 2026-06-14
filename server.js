@@ -13,6 +13,7 @@ import { handleMaterials } from "./src/routes/materials.js";
 import { handleReviews } from "./src/routes/reviews.js";
 import { handleTimeline } from "./src/routes/timeline.js";
 import { handlePhotos } from "./src/routes/photos.js";
+import { handleCalendar } from "./src/routes/calendar.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "public");
@@ -56,6 +57,10 @@ const server = http.createServer(async (req, res) => {
     if (pathname.startsWith("/api/")) {
       if (pathname.startsWith("/api/users")) {
         const handled = handleUsers(req, res, db);
+        if (handled !== false) return;
+      }
+      if (pathname.startsWith("/api/calendar")) {
+        const handled = await handleCalendar(req, res, db, pathname);
         if (handled !== false) return;
       }
       if (pathname.startsWith("/api/projects")) {
