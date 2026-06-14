@@ -14,6 +14,7 @@ export async function handleProjects(req, res, db, pathname) {
       updatedAt: new Date().toISOString().slice(0, 10),
       reviewRecords: [],
       timelineRecords: [],
+      photoArchive: { before: [], during: [], after: [] },
       ...input
     };
     db.projects.unshift(project);

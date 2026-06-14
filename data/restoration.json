@@ -28,6 +28,16 @@
       "dueDate": "2026-06-22",
       "status": "待复核",
       "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+      "photoArchive": {
+        "before": [
+          "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+          "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
+        ],
+        "during": [
+          "https://images.unsplash.com/photo-1466442929976-97f336a657be"
+        ],
+        "after": []
+      },
       "updatedAt": "2026-06-14",
       "reviewRecords": [],
       "timelineRecords": [
@@ -83,7 +93,19 @@
       "dueDate": "2026-06-12",
       "status": "已完成",
       "photos": "",
-      "updatedAt": "2026-06-13",
+      "photoArchive": {
+        "before": [
+          "https://example.com/before1.jpg",
+          "https://example.com/before2.jpg"
+        ],
+        "during": [
+          "https://example.com/during1.jpg"
+        ],
+        "after": [
+          "https://example.com/after1.jpg"
+        ]
+      },
+      "updatedAt": "2026-06-14",
       "reviewRecords": [
         {
           "reviewer": "管理员",
