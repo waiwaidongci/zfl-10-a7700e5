@@ -42,7 +42,8 @@ function statusClass(s) {
 
 function render() {
   const user = users.find((item) => item.id === viewer.value) || users[0];
-  const visible = user.role === "admin" ? projects : projects.filter((item) => item.owner === user.name);
+  const isAdmin = user.role === "admin";
+  const visible = isAdmin ? projects : projects.filter((item) => item.owner === user.name);
   const active = projects.filter((item) => item.status !== "已完成").length;
   const overdue = projects.filter(isOverdue).length;
   const workload = projects.reduce((map, item) => {
@@ -95,6 +96,7 @@ function render() {
       '<button class="' + detailBtnCls + '" data-detail="' + escapeHtml(p.id) + '">' + detailBtnText + '</button>' +
       '<button class="secondary photo-btn" data-project="' + p.id + '">📷照片' + photoBadge + '</button>' +
       '<button class="secondary timeline-btn" data-project="' + p.id + '">过程时间线</button>' +
+      (isAdmin && p.status === '已完成' ? '<button class="secondary report-btn" data-report="' + escapeHtml(p.id) + '">📄生成报告</button>' : '') +
       '</div>' +
       '</article>';
 
@@ -143,6 +145,15 @@ function render() {
       render();
       if (expandedProjectId) {
         initDetailView(expandedProjectId);
+      }
+    };
+  });
+
+  document.querySelectorAll(".report-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const projectId = btn.dataset.report;
+      if (projectId) {
+        window.location.href = "/report.html?projectId=" + encodeURIComponent(projectId);
       }
     };
   });
@@ -288,7 +299,13 @@ async function load() {
   materials = await api("/api/materials");
 
   viewer.innerHTML = users.map((u) => '<option value="' + u.id + '">' + escapeHtml(u.name) + ' · ' + escapeHtml(u.role) + '</option>').join("");
-  if (!viewer.value) viewer.value = users[0].id;
+  const savedViewerId = localStorage.getItem("viewerId");
+  if (savedViewerId && users.find(u => u.id === savedViewerId)) {
+    viewer.value = savedViewerId;
+  } else if (!viewer.value) {
+    viewer.value = users[0].id;
+  }
+  localStorage.setItem("viewerId", viewer.value);
 
   if (window.Timeline) window.Timeline.setUser(users.find(u => u.id === viewer.value) || users[0]);
 
@@ -314,6 +331,7 @@ window.onPhotosUpdated = async (projectId) => {
 };
 
 viewer.onchange = () => {
+  localStorage.setItem("viewerId", viewer.value);
   if (window.Timeline) window.Timeline.setUser(users.find(u => u.id === viewer.value) || users[0]);
   render();
 };

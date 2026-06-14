@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>修复报告 - 古籍修复工作室</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="report-body">
+  <header class="report-header no-print">
+    <div>
+      <h1>修复报告预览</h1>
+      <div class="meta" id="reportMeta">加载中...</div>
+    </div>
+    <div class="report-header-actions">
+      <button id="backBtn" class="secondary">← 返回项目列表</button>
+      <button id="printBtn">🖨️ 打印报告</button>
+    </div>
+  </header>
+
+  <main class="report-main">
+    <div id="reportLoading" class="report-loading">
+      <div class="report-loading-icon">📄</div>
+      <div>正在加载报告数据...</div>
+    </div>
+
+    <div id="reportError" class="report-error" style="display:none;">
+      <div class="report-error-icon">⚠️</div>
+      <div id="reportErrorText">加载失败</div>
+      <button id="retryBtn" class="secondary" style="margin-top:12px;">重试</button>
+    </div>
+
+    <div id="reportContent" class="report-content" style="display:none;">
+      <div class="report-page">
+        <div class="report-title-block">
+          <div class="report-studio-name">古籍修复工作室</div>
+          <h1 class="report-title">藏品修复报告</h1>
+          <div class="report-subtitle">Restoration Report</div>
+        </div>
+
+        <div class="report-info-grid">
+          <div class="report-info-item">
+            <span class="report-info-label">报告编号</span>
+            <span class="report-info-value" id="reportId">-</span>
+          </div>
+          <div class="report-info-item">
+            <span class="report-info-label">生成日期</span>
+            <span class="report-info-value" id="reportGeneratedAt">-</span>
+          </div>
+          <div class="report-info-item">
+            <span class="report-info-label">项目负责人</span>
+            <span class="report-info-value" id="reportOwner">-</span>
+          </div>
+          <div class="report-info-item">
+            <span class="report-info-label">完成日期</span>
+            <span class="report-info-value" id="reportCompletionDate">-</span>
+          </div>
+        </div>
+
+        <section class="report-section">
+          <h2 class="report-section-title"><span class="report-section-num">一</span>藏品基本信息</h2>
+          <table class="report-table">
+            <tbody>
+              <tr>
+                <th>藏品名称</th>
+                <td id="artifactTitle">-</td>
+              </tr>
+              <tr>
+                <th>年　　代</th>
+                <td id="artifactEra">-</td>
+              </tr>
+              <tr>
+                <th>破损情况</th>
+                <td id="artifactDamage">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="report-section">
+          <h2 class="report-section-title"><span class="report-section-num">二</span>修复方案</h2>
+          <div class="report-subsection">
+            <h3 class="report-subsection-title">修复步骤</h3>
+            <div class="report-text-block" id="restorationSteps">-</div>
+          </div>
+          <div class="report-subsection">
+            <h3 class="report-subsection-title">使用材料</h3>
+            <div class="report-text-block" id="restorationMaterials">-</div>
+          </div>
+        </section>
+
+        <section class="report-section">
+          <h2 class="report-section-title"><span class="report-section-num">三</span>修复过程记录</h2>
+          <div id="processRecordsWrap"></div>
+        </section>
+
+        <section class="report-section">
+          <h2 class="report-section-title"><span class="report-section-num">四</span>照片档案</h2>
+          <div id="photosWrap"></div>
+        </section>
+
+        <section class="report-section" id="reviewSection" style="display:none;">
+          <h2 class="report-section-title"><span class="report-section-num">五</span>复核记录</h2>
+          <div id="reviewWrap"></div>
+        </section>
+
+        <div class="report-signature">
+          <div class="report-signature-item">
+            <div class="report-signature-line">修复人签字：</div>
+            <div class="report-signature-date">日期：</div>
+          </div>
+          <div class="report-signature-item">
+            <div class="report-signature-line">复核人签字：</div>
+            <div class="report-signature-date">日期：</div>
+          </div>
+        </div>
+
+        <div class="report-footer">
+          <div>古籍修复工作室 · 藏品修复报告</div>
+          <div class="report-footer-page">第 <span id="reportPageNum">1</span> 页</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/report.js"></script>
+</body>
+</html>

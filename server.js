@@ -14,6 +14,7 @@ import { handleReviews } from "./src/routes/reviews.js";
 import { handleTimeline } from "./src/routes/timeline.js";
 import { handlePhotos } from "./src/routes/photos.js";
 import { handleCalendar } from "./src/routes/calendar.js";
+import { handleReports } from "./src/routes/reports.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "public");
@@ -64,6 +65,8 @@ const server = http.createServer(async (req, res) => {
         if (handled !== false) return;
       }
       if (pathname.startsWith("/api/projects")) {
+        const handledReport = await handleReports(req, res, db, pathname);
+        if (handledReport !== false) return;
         const handledReview = await handleReviews(req, res, db, pathname);
         if (handledReview !== false) return;
         const handledTimeline = await handleTimeline(req, res, db, pathname);

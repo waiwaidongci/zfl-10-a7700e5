@@ -68,6 +68,101 @@
       "updatedAt": "2026-06-10",
       "reviewRecords": [],
       "timelineRecords": []
+    },
+    {
+      "id": "R-003",
+      "title": "民国线装山水册",
+      "era": "民国",
+      "damage": "书脊断裂、部分页面脱落、封面磨损",
+      "steps": "1. 拆解书册，逐页清理灰尘和霉斑\n2. 使用小麦淀粉浆对脱胶页面进行补缀\n3. 对断裂书脊进行重新装订，使用棉线穿线加固\n4. 封面使用楮皮纸进行托裱修复\n5. 压平定型，干燥处理",
+      "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+      "owner": "顾眉",
+      "dueDate": "2026-06-05",
+      "status": "已完成",
+      "photos": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c",
+      "photoArchive": {
+        "before": [
+          "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c",
+          "https://images.unsplash.com/photo-1519682337058-a94d519337bc"
+        ],
+        "during": [
+          "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8"
+        ],
+        "after": [
+          "https://images.unsplash.com/photo-1543002588-bfa74002ed7e"
+        ]
+      },
+      "updatedAt": "2026-06-05",
+      "reviewRecords": [
+        {
+          "reviewer": "管理员",
+          "reviewedAt": "2026-06-05",
+          "result": "通过",
+          "opinion": "修复工艺规范，页面平整，书脊牢固，符合修复标准。建议归档保存。"
+        }
+      ],
+      "timelineRecords": [
+        {
+          "id": "T-001",
+          "type": "manual",
+          "operator": "顾眉",
+          "operatorId": "u-mei",
+          "date": "2026-06-01",
+          "steps": "拆解书册，逐页检查破损情况，记录问题点",
+          "materials": "",
+          "notes": "共发现12页有不同程度破损",
+          "photoUrl": "",
+          "createdAt": "2026-06-01T09:00:00.000Z"
+        },
+        {
+          "id": "T-002",
+          "type": "manual",
+          "operator": "顾眉",
+          "operatorId": "u-mei",
+          "date": "2026-06-02",
+          "steps": "使用软毛刷和吸尘器清理页面灰尘，用低浓度乙醇轻擦霉斑",
+          "materials": "低浓度乙醇、软毛刷",
+          "notes": "清理过程注意保护页面文字",
+          "photoUrl": "",
+          "createdAt": "2026-06-02T10:30:00.000Z"
+        },
+        {
+          "id": "T-003",
+          "type": "manual",
+          "operator": "顾眉",
+          "operatorId": "u-mei",
+          "date": "2026-06-03",
+          "steps": "对脱胶页面进行补缀，使用楮皮纸和小麦淀粉浆",
+          "materials": "楮皮纸、小麦淀粉浆",
+          "notes": "补缀时注意纸质纹理方向一致",
+          "photoUrl": "",
+          "createdAt": "2026-06-03T14:00:00.000Z"
+        },
+        {
+          "id": "T-004",
+          "type": "manual",
+          "operator": "顾眉",
+          "operatorId": "u-mei",
+          "date": "2026-06-04",
+          "steps": "重新装订书脊，穿线加固，封面托裱修复",
+          "materials": "棉线、楮皮纸、小麦淀粉浆",
+          "notes": "穿线采用四眼线装法",
+          "photoUrl": "",
+          "createdAt": "2026-06-04T11:00:00.000Z"
+        },
+        {
+          "id": "T-005",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-05",
+          "steps": "状态自动流转",
+          "materials": "",
+          "notes": "",
+          "systemMessage": "状态变更：待复核 → 已完成",
+          "createdAt": "2026-06-05T16:00:00.000Z"
+        }
+      ]
     }
   ],
   "intakes": [
