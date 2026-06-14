@@ -26,7 +26,7 @@
       "materials": "楮皮纸、小麦淀粉浆",
       "owner": "顾眉",
       "dueDate": "2026-06-22",
-      "status": "待复核",
+      "status": "进行中",
       "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
       "photoArchive": {
         "before": [
@@ -38,49 +38,9 @@
         ],
         "after": []
       },
-      "updatedAt": "2026-06-14",
+      "updatedAt": "2026-06-11",
       "reviewRecords": [],
-      "timelineRecords": [
-        {
-          "id": "T-1781395167712-k958cs",
-          "type": "manual",
-          "operator": "顾眉",
-          "operatorId": "u-mei",
-          "date": "2026-06-13",
-          "steps": "完成虫蛀区域清洁，使用软毛刷清除表面灰尘",
-          "materials": "楮皮纸",
-          "notes": "虫蛀区域较为集中，需要重点补纸",
-          "photoUrl": "",
-          "systemMessage": "",
-          "createdAt": "2026-06-13T23:59:27.712Z"
-        },
-        {
-          "id": "T-1781395197575-gf9q20",
-          "type": "system",
-          "operator": "顾眉",
-          "operatorId": "u-mei",
-          "date": "2026-06-13",
-          "steps": "状态自动流转",
-          "materials": "",
-          "notes": "",
-          "photoUrl": "",
-          "systemMessage": "状态变更：进行中 → 待复核",
-          "createdAt": "2026-06-13T23:59:57.575Z"
-        },
-        {
-          "id": "T-1781396509874-9y14gy",
-          "type": "manual",
-          "operator": "管理员",
-          "operatorId": "u-admin",
-          "date": "2026-06-14",
-          "steps": "补纸完成，使用楮皮纸对虫蛀区域进行托裱",
-          "materials": "楮皮纸、小麦淀粉浆",
-          "notes": "托裱后需自然阴干，避免阳光直射",
-          "photoUrl": "",
-          "systemMessage": "",
-          "createdAt": "2026-06-14T00:21:49.874Z"
-        }
-      ]
+      "timelineRecords": []
     },
     {
       "id": "R-002",
@@ -91,44 +51,22 @@
       "materials": "棉线、宣纸",
       "owner": "严澈",
       "dueDate": "2026-06-12",
-      "status": "已完成",
+      "status": "待复核",
       "photos": "",
       "photoArchive": {
         "before": [
-          "https://example.com/before1.jpg",
-          "https://example.com/before2.jpg"
+          "https://example.com/broken-link-1.jpg",
+          "https://example.com/broken-link-2.jpg"
         ],
         "during": [
-          "https://example.com/during1.jpg"
+          "https://example.com/broken-link-3.jpg"
         ],
         "after": [
-          "https://example.com/after1.jpg"
+          "https://images.unsplash.com/photo-1481627834876-b7833e8f5570"
         ]
       },
-      "updatedAt": "2026-06-14",
-      "reviewRecords": [
-        {
-          "reviewer": "管理员",
-          "reviewerId": "u-admin",
-          "opinion": "修复质量良好，步骤完整，材料使用合理，符合修复规范。",
-          "result": "通过",
-          "reviewedAt": "2026-06-13"
-        },
-        {
-          "reviewer": "管理员",
-          "reviewerId": "u-admin",
-          "opinion": "书脊重装处仍有缝隙，需要重新加固；水渍区域清洁不彻底，请返工。",
-          "result": "退回",
-          "reviewedAt": "2026-06-13"
-        },
-        {
-          "reviewer": "管理员",
-          "reviewerId": "u-admin",
-          "opinion": "修复质量良好，书脊重装牢固，水渍清洁彻底，材料使用合理，符合古籍修复规范。",
-          "result": "通过",
-          "reviewedAt": "2026-06-13"
-        }
-      ],
+      "updatedAt": "2026-06-10",
+      "reviewRecords": [],
       "timelineRecords": []
     }
   ],

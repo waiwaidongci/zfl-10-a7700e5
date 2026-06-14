@@ -5,6 +5,10 @@ const statsEl = document.querySelector("#stats");
 let materials = [];
 let editingId = null;
 
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 async function api(path, options) {
   const res = await fetch(path, options && options.body ? { ...options, headers: { "Content-Type": "application/json" } } : options);
   return res.json();
@@ -38,16 +42,16 @@ function render() {
     const cls = low ? 'overdue' : '';
     return (
       '<article class="' + cls + '">' +
-      '<div class="row"><h3>' + m.name + '</h3>' +
+      '<div class="row"><h3>' + escapeHtml(m.name) + '</h3>' +
       (low ? '<span class="pill pending">库存不足</span>' : '<span class="pill active">库存正常</span>') +
       '</div>' +
-      '<div class="meta">更新时间：' + m.updatedAt + '</div>' +
-      '<div><b>当前库存</b> ' + m.quantity + ' ' + m.unit + '</div>' +
-      '<div><b>低库存阈值</b> ' + m.lowStockThreshold + ' ' + m.unit + '</div>' +
+      '<div class="meta">更新时间：' + escapeHtml(m.updatedAt) + '</div>' +
+      '<div><b>当前库存</b> ' + escapeHtml(m.quantity) + ' ' + escapeHtml(m.unit) + '</div>' +
+      '<div><b>低库存阈值</b> ' + escapeHtml(m.lowStockThreshold) + ' ' + escapeHtml(m.unit) + '</div>' +
       (low ? '<div class="danger">库存已低于预警阈值，请及时补充</div>' : '') +
       '<div class="actions">' +
-      '<button class="secondary" data-edit="' + m.id + '">编辑</button>' +
-      '<button class="danger" data-delete="' + m.id + '">删除</button>' +
+      '<button class="secondary" data-edit="' + escapeHtml(m.id) + '">编辑</button>' +
+      '<button class="danger" data-delete="' + escapeHtml(m.id) + '">删除</button>' +
       '</div>' +
       '</article>'
     );

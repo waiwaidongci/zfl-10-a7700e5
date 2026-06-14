@@ -4,6 +4,10 @@ const statsEl = document.querySelector("#stats");
 
 let intakes = [];
 
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 async function api(path, options) {
   const res = await fetch(path, options && options.body ? { ...options, headers: { "Content-Type": "application/json" } } : options);
   return res.json();
@@ -28,15 +32,15 @@ function render() {
 
   intakesEl.innerHTML = intakes.map((i) => (
     '<article>' +
-    '<div class="row"><h3>' + i.title + '</h3><span class="pill ' + statusClass(i.status) + '">' + i.status + '</span></div>' +
-    '<div class="meta">' + (i.era || '年代不详') + ' · 来源：' + (i.source || '未知') + '</div>' +
-    '<div><b>接收人：</b>' + (i.receiver || '-') + '</div>' +
-    '<div><b>接收时间：</b>' + (i.receivedAt || '-') + '</div>' +
-    '<div><b>破损描述：</b>' + (i.damage || '-') + '</div>' +
-    '<div><b>存放位置：</b>' + (i.tempLocation || '-') + '</div>' +
+    '<div class="row"><h3>' + escapeHtml(i.title) + '</h3><span class="pill ' + statusClass(i.status) + '">' + escapeHtml(i.status) + '</span></div>' +
+    '<div class="meta">' + escapeHtml(i.era || '年代不详') + ' · 来源：' + escapeHtml(i.source || '未知') + '</div>' +
+    '<div><b>接收人：</b>' + escapeHtml(i.receiver || '-') + '</div>' +
+    '<div><b>接收时间：</b>' + escapeHtml(i.receivedAt || '-') + '</div>' +
+    '<div><b>破损描述：</b>' + escapeHtml(i.damage || '-') + '</div>' +
+    '<div><b>存放位置：</b>' + escapeHtml(i.tempLocation || '-') + '</div>' +
     '<div class="actions">' +
-    '<button class="secondary" data-action="status" data-id="' + i.id + '">更新状态</button>' +
-    '<button class="danger" data-action="delete" data-id="' + i.id + '">删除</button>' +
+    '<button class="secondary" data-action="status" data-id="' + escapeHtml(i.id) + '">更新状态</button>' +
+    '<button class="danger" data-action="delete" data-id="' + escapeHtml(i.id) + '">删除</button>' +
     '</div>' +
     '</article>'
   )).join("");

@@ -16,6 +16,10 @@ let currentUser = null;
 let pendingProjects = [];
 let selectedProject = null;
 
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 async function api(path, options) {
   const headers = { "Content-Type": "application/json" };
   if (currentUser) {
@@ -62,11 +66,11 @@ function renderHistory(records) {
     records.map((r) => (
       '<div class="history-item">' +
         '<div class="history-row">' +
-          '<span class="history-reviewer">' + r.reviewer + '</span>' +
-          '<span class="pill ' + (r.result === "通过" ? "done" : "active") + '">' + r.result + '</span>' +
-          '<span class="history-date">' + r.reviewedAt + '</span>' +
+          '<span class="history-reviewer">' + escapeHtml(r.reviewer) + '</span>' +
+          '<span class="pill ' + (r.result === "通过" ? "done" : "active") + '">' + escapeHtml(r.result) + '</span>' +
+          '<span class="history-date">' + escapeHtml(r.reviewedAt) + '</span>' +
         '</div>' +
-        '<div class="history-opinion"><b>意见：</b>' + r.opinion + '</div>' +
+        '<div class="history-opinion"><b>意见：</b>' + escapeHtml(r.opinion) + '</div>' +
       '</div>'
     )).join("") +
     '</div>';
@@ -92,16 +96,16 @@ function render() {
       const cls = isOverdue(p) ? 'overdue' : '';
       return (
         '<article class="' + cls + '">' +
-          '<div class="row"><h3>' + p.title + '</h3><span class="pill pending">待复核</span></div>' +
-          '<div class="meta">' + p.era + ' · ' + p.owner + ' · 预计 ' + p.dueDate + '</div>' +
-          '<div><b>破损</b> ' + p.damage + '</div>' +
-          '<div><b>步骤</b> ' + p.steps + '</div>' +
-          '<div><b>材料</b> ' + p.materials + '</div>' +
+          '<div class="row"><h3>' + escapeHtml(p.title) + '</h3><span class="pill pending">待复核</span></div>' +
+          '<div class="meta">' + escapeHtml(p.era) + ' · ' + escapeHtml(p.owner) + ' · 预计 ' + escapeHtml(p.dueDate) + '</div>' +
+          '<div><b>破损</b> ' + escapeHtml(p.damage) + '</div>' +
+          '<div><b>步骤</b> ' + escapeHtml(p.steps) + '</div>' +
+          '<div><b>材料</b> ' + escapeHtml(p.materials) + '</div>' +
           (isOverdue(p) ? '<div class="danger">已超过预计完成日期</div>' : '') +
           renderHistory(p.reviewRecords) +
           '<div class="actions">' +
-            '<button class="secondary" data-action="review" data-id="' + p.id + '">开始复核</button>' +
-            '<button data-action="history" data-id="' + p.id + '">查看详情</button>' +
+            '<button class="secondary" data-action="review" data-id="' + escapeHtml(p.id) + '">开始复核</button>' +
+            '<button data-action="history" data-id="' + escapeHtml(p.id) + '">查看详情</button>' +
           '</div>' +
         '</article>'
       );
@@ -126,13 +130,13 @@ function openReviewModal(projectId) {
   modalTitle.textContent = "项目复核 - " + selectedProject.title;
   projectInfo.innerHTML =
     '<div class="project-detail">' +
-      '<div class="detail-row"><span class="detail-label">编号</span><span>' + selectedProject.id + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">年代</span><span>' + selectedProject.era + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">负责人</span><span>' + selectedProject.owner + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">预计完成</span><span>' + selectedProject.dueDate + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">破损情况</span><span>' + selectedProject.damage + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">修复步骤</span><span>' + selectedProject.steps + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">使用材料</span><span>' + selectedProject.materials + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">编号</span><span>' + escapeHtml(selectedProject.id) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">年代</span><span>' + escapeHtml(selectedProject.era) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">负责人</span><span>' + escapeHtml(selectedProject.owner) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">预计完成</span><span>' + escapeHtml(selectedProject.dueDate) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">破损情况</span><span>' + escapeHtml(selectedProject.damage) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">修复步骤</span><span>' + escapeHtml(selectedProject.steps) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">使用材料</span><span>' + escapeHtml(selectedProject.materials) + '</span></div>' +
     '</div>' +
     renderHistory(selectedProject.reviewRecords);
 
@@ -148,13 +152,13 @@ function openDetailModal(projectId) {
   modalTitle.textContent = "项目详情 - " + project.title;
   projectInfo.innerHTML =
     '<div class="project-detail">' +
-      '<div class="detail-row"><span class="detail-label">编号</span><span>' + project.id + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">年代</span><span>' + project.era + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">负责人</span><span>' + project.owner + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">预计完成</span><span>' + project.dueDate + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">破损情况</span><span>' + project.damage + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">修复步骤</span><span>' + project.steps + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">使用材料</span><span>' + project.materials + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">编号</span><span>' + escapeHtml(project.id) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">年代</span><span>' + escapeHtml(project.era) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">负责人</span><span>' + escapeHtml(project.owner) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">预计完成</span><span>' + escapeHtml(project.dueDate) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">破损情况</span><span>' + escapeHtml(project.damage) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">修复步骤</span><span>' + escapeHtml(project.steps) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-label">使用材料</span><span>' + escapeHtml(project.materials) + '</span></div>' +
     '</div>' +
     renderHistory(project.reviewRecords);
 
@@ -207,7 +211,7 @@ async function submitReview(result) {
 async function load() {
   users = await api("/api/users");
 
-  viewer.innerHTML = users.map((u) => '<option value="' + u.id + '">' + u.name + ' · ' + u.role + '</option>').join("");
+  viewer.innerHTML = users.map((u) => '<option value="' + escapeHtml(u.id) + '">' + escapeHtml(u.name) + ' · ' + escapeHtml(u.role) + '</option>').join("");
   if (!viewer.value && users.length > 0) viewer.value = users[0].id;
 
   currentUser = users.find((u) => u.id === viewer.value) || users[0];

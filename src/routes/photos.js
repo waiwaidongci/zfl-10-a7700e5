@@ -40,39 +40,6 @@ export async function handlePhotos(req, res, db, pathname) {
     return sendJson(res, 201, project.photoArchive);
   }
 
-  if (req.method === "PUT") {
-    const input = await parseBody(req);
-    const { before, during, after } = input;
-
-    const newArchive = {
-      before: Array.isArray(before)
-        ? before.filter((u) => typeof u === "string" && u.trim() !== "")
-        : project.photoArchive.before,
-      during: Array.isArray(during)
-        ? during.filter((u) => typeof u === "string" && u.trim() !== "")
-        : project.photoArchive.during,
-      after: Array.isArray(after)
-        ? after.filter((u) => typeof u === "string" && u.trim() !== "")
-        : project.photoArchive.after
-    };
-
-    for (const stage of VALID_STAGES) {
-      const urls = newArchive[stage];
-      for (const url of urls) {
-        try {
-          new URL(url.trim());
-        } catch {
-          return sendJson(res, 400, { error: "invalid_url", message: `阶段 ${stage} 存在格式不正确的链接: ${url}` });
-        }
-      }
-    }
-
-    project.photoArchive = newArchive;
-    project.updatedAt = new Date().toISOString().slice(0, 10);
-    await saveDb(db);
-    return sendJson(res, 200, project.photoArchive);
-  }
-
   if (req.method === "DELETE") {
     const input = await parseBody(req);
     const { stage, index } = input;

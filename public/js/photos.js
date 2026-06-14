@@ -2,14 +2,11 @@
   let photosCurrentProjectId = null;
   let photosCurrentArchive = { before: [], during: [], after: [] };
   let photosCurrentView = "gallery";
-  let galleryInstance = null;
-  let compareInstance = null;
 
   const STAGE_LABELS = { before: "修复前", during: "修复中", after: "修复后" };
   const STAGE_ORDER = ["before", "during", "after"];
 
   function sanitizeArchive(archive) {
-    if (window.PhotosGallery) return window.PhotosGallery.sanitizeArchive(archive);
     const result = { before: [], during: [], after: [] };
     STAGE_ORDER.forEach(function(stage) {
       const arr = (archive && archive[stage]) || [];
@@ -25,11 +22,10 @@
     const viewerId = viewerEl ? viewerEl.value : "";
     const headers = { "Content-Type": "application/json" };
     if (viewerId) headers["X-Viewer-Id"] = viewerId;
-    return fetch(path, options && options.body ? Object.assign({}, options, { headers }) : (options ? Object.assign({}, options, { headers }) : { headers })).then(r => r.json());
+    return fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers })).then(r => r.json());
   }
 
   function escapeHtml(s) {
-    if (window.PhotosGallery) return window.PhotosGallery.escapeHtml(s);
     return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
@@ -72,17 +68,16 @@
   }
 
   function closeModal() {
-    const m = document.getElementById("photos-modal");
+    var m = document.getElementById("photos-modal");
     if (m) m.remove();
     document.removeEventListener("keydown", onEscKey);
-    galleryInstance = null;
-    compareInstance = null;
+    closeLightbox();
   }
 
   function onEscKey(e) {
     if (e.key === "Escape") {
-      if (window.PhotoLightbox) {
-        window.PhotoLightbox.close();
+      if (document.getElementById("photo-lightbox")) {
+        closeLightbox();
       } else {
         closeModal();
       }
@@ -90,7 +85,7 @@
   }
 
   function renderBody() {
-    const body = document.getElementById("photos-body");
+    var body = document.getElementById("photos-body");
     if (!body) return;
 
     body.innerHTML =
@@ -103,67 +98,24 @@
     body.querySelectorAll(".photo-toggle-btn").forEach(function(btn) {
       btn.onclick = function() {
         photosCurrentView = btn.dataset.view;
-        body.querySelectorAll(".photo-toggle-btn").forEach(function(b) {
-          b.classList.toggle("active", b === btn);
-        });
-        renderContent();
+        renderBody();
       };
     });
 
-    renderContent();
-  }
-
-  function renderContent() {
-    const container = document.getElementById("photo-main-content");
-    if (!container) return;
-
-    galleryInstance = null;
-    compareInstance = null;
-
-    const lightboxHandler = function(url, alt) {
-      if (window.PhotoLightbox) {
-        window.PhotoLightbox.open(url, alt);
-      }
-    };
-
-    const updateHandler = function(newArchive) {
-      photosCurrentArchive = newArchive;
-      if (typeof window.onPhotosUpdated === "function") {
-        window.onPhotosUpdated(photosCurrentProjectId);
-      }
-    };
-
     if (photosCurrentView === "gallery") {
-      if (window.PhotosGallery) {
-        galleryInstance = new window.PhotosGallery(container, {
-          projectId: photosCurrentProjectId,
-          archive: photosCurrentArchive,
-          editable: true,
-          onLightbox: lightboxHandler,
-          onUpdate: updateHandler
-        });
-      } else {
-        container.innerHTML = renderGalleryFallback();
-        bindFallbackEvents();
-      }
+      renderGallery();
     } else {
-      if (window.PhotosCompare) {
-        compareInstance = new window.PhotosCompare(container, {
-          archive: photosCurrentArchive,
-          mode: "side-by-side",
-          onLightbox: lightboxHandler
-        });
-      } else {
-        container.innerHTML = renderCompareFallback();
-        bindFallbackCompareEvents();
-      }
+      renderCompare();
     }
   }
 
-  function renderGalleryFallback() {
-    let html = '<div class="photo-stages">';
+  function renderGallery() {
+    var container = document.getElementById("photo-main-content");
+    if (!container) return;
+
+    var html = '<div class="photo-stages">';
     STAGE_ORDER.forEach(function(stage) {
-      const photos = photosCurrentArchive[stage] || [];
+      var photos = photosCurrentArchive[stage] || [];
       html += '<div class="photo-stage">';
       html += '<div class="photo-stage-header">';
       html += '<span class="photo-stage-label ' + stage + '">' + STAGE_LABELS[stage] + '</span>';
@@ -200,34 +152,152 @@
       html += '</div>';
     });
     html += '</div>';
-    return html;
+
+    container.innerHTML = html;
+    bindImageHandlers();
+    bindGalleryEvents();
   }
 
-  function renderCompareFallback() {
-    const hasAny = STAGE_ORDER.some(function(s) { return (photosCurrentArchive[s] || []).length > 0; });
+  function bindGalleryEvents() {
+    document.querySelectorAll(".photo-delete-btn").forEach(function(btn) {
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        deletePhoto(btn.dataset.stage, parseInt(btn.dataset.index, 10));
+      };
+    });
+
+    document.querySelectorAll(".photo-add-btn").forEach(function(btn) {
+      btn.onclick = function() {
+        var stage = btn.dataset.stage;
+        var input = document.querySelector('.photo-add-input[data-stage="' + stage + '"]');
+        if (!input) return;
+        addPhoto(stage, input.value.trim());
+      };
+    });
+
+    document.querySelectorAll(".photo-add-input").forEach(function(input) {
+      input.onkeydown = function(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          var stage = input.dataset.stage;
+          addPhoto(stage, input.value.trim());
+        }
+      };
+    });
+  }
+
+  function bindImageHandlers() {
+    document.querySelectorAll(".photo-img-wrap img, .photo-compare-img-wrap img").forEach(function(img) {
+      var wrap = img.parentNode;
+      var fallback = wrap.querySelector(".photo-fallback");
+      var hint = wrap.querySelector(".photo-zoom-hint");
+
+      function handleError() {
+        img.style.display = "none";
+        if (fallback) fallback.style.display = "flex";
+        if (hint) hint.style.display = "none";
+        wrap.classList.remove("photo-clickable");
+        wrap.onclick = null;
+      }
+
+      img.onerror = handleError;
+
+      if (img.complete) {
+        if (img.naturalWidth === 0) {
+          handleError();
+        }
+      }
+    });
+
+    document.querySelectorAll(".photo-clickable").forEach(function(wrap) {
+      wrap.onclick = function() {
+        var fallback = wrap.querySelector(".photo-fallback");
+        if (fallback && fallback.style.display === "flex") return;
+        openLightbox(wrap.dataset.url, wrap.dataset.alt);
+      };
+    });
+  }
+
+  async function addPhoto(stage, url) {
+    if (!url) return;
+
+    var input = document.querySelector('.photo-add-input[data-stage="' + stage + '"]');
+    try {
+      new URL(url);
+    } catch {
+      if (input) input.style.borderColor = "var(--warn)";
+      setTimeout(function() { if (input) input.style.borderColor = ""; }, 2000);
+      return;
+    }
+
+    var res = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos", {
+      method: "POST",
+      body: JSON.stringify({ stage: stage, url: url })
+    });
+
+    if (res.error) {
+      alert(res.message || "添加失败");
+      return;
+    }
+
+    photosCurrentArchive = sanitizeArchive(res);
+    if (input) input.value = "";
+    renderBody();
+
+    if (typeof window.onPhotosUpdated === "function") {
+      window.onPhotosUpdated(photosCurrentProjectId);
+    }
+  }
+
+  async function deletePhoto(stage, index) {
+    if (!confirm("确定删除这张" + STAGE_LABELS[stage] + "照片吗？")) return;
+
+    var res = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos", {
+      method: "DELETE",
+      body: JSON.stringify({ stage: stage, index: index })
+    });
+
+    if (res.error) {
+      alert(res.message || "删除失败");
+      return;
+    }
+
+    photosCurrentArchive = sanitizeArchive(res);
+    renderBody();
+
+    if (typeof window.onPhotosUpdated === "function") {
+      window.onPhotosUpdated(photosCurrentProjectId);
+    }
+  }
+
+  function renderCompare() {
+    var container = document.getElementById("photo-main-content");
+    if (!container) return;
+
+    var hasAny = STAGE_ORDER.some(function(s) { return (photosCurrentArchive[s] || []).length > 0; });
 
     if (!hasAny) {
-      return (
+      container.innerHTML =
         '<div class="photo-compare-empty">' +
           '<div class="photo-empty-icon">📷</div>' +
           '<div>暂无照片，请先在图库视图中添加照片</div>' +
-        '</div>'
-      );
+        '</div>';
+      return;
     }
 
-    const maxLen = Math.max.apply(null, STAGE_ORDER.map(function(s) { return (photosCurrentArchive[s] || []).length; }));
+    var maxLen = Math.max.apply(null, STAGE_ORDER.map(function(s) { return (photosCurrentArchive[s] || []).length; }));
 
-    let html = '<div class="photo-compare">';
+    var html = '<div class="photo-compare">';
     html += '<div class="photo-compare-header-row">';
     STAGE_ORDER.forEach(function(stage) {
       html += '<div class="photo-compare-col-header ' + stage + '">' + STAGE_LABELS[stage] + '</div>';
     });
     html += '</div>';
 
-    for (let row = 0; row < maxLen; row++) {
+    for (var row = 0; row < maxLen; row++) {
       html += '<div class="photo-compare-row">';
       STAGE_ORDER.forEach(function(stage) {
-        const photos = photosCurrentArchive[stage] || [];
+        var photos = photosCurrentArchive[stage] || [];
         if (row < photos.length) {
           html += '<div class="photo-compare-cell">';
           html += '<div class="photo-compare-img-wrap photo-clickable" data-url="' + escapeHtml(photos[row]) + '" data-alt="' + STAGE_LABELS[stage] + '照片 ' + (row + 1) + '">';
@@ -246,129 +316,13 @@
     }
 
     html += '</div>';
-    return html;
+    container.innerHTML = html;
+    bindImageHandlers();
   }
 
-  function bindFallbackEvents() {
-    document.querySelectorAll(".photo-delete-btn").forEach(function(btn) {
-      btn.onclick = function(e) {
-        e.stopPropagation();
-        deletePhoto(btn.dataset.stage, parseInt(btn.dataset.index, 10));
-      };
-    });
-
-    document.querySelectorAll(".photo-add-btn").forEach(function(btn) {
-      btn.onclick = function() {
-        const stage = btn.dataset.stage;
-        const input = document.querySelector('.photo-add-input[data-stage="' + stage + '"]');
-        if (!input) return;
-        addPhoto(stage, input.value.trim());
-      };
-    });
-
-    document.querySelectorAll(".photo-add-input").forEach(function(input) {
-      input.onkeydown = function(e) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          const stage = input.dataset.stage;
-          addPhoto(stage, input.value.trim());
-        }
-      };
-    });
-
-    bindImageFallbackHandlers();
-  }
-
-  function bindFallbackCompareEvents() {
-    bindImageFallbackHandlers();
-  }
-
-  function bindImageFallbackHandlers() {
-    document.querySelectorAll(".photo-img-wrap img, .photo-compare-img-wrap img").forEach(function(img) {
-      img.onerror = function() {
-        this.style.display = "none";
-        const wrap = this.parentNode;
-        const fallback = wrap.querySelector(".photo-fallback");
-        if (fallback) fallback.style.display = "flex";
-        const hint = wrap.querySelector(".photo-zoom-hint");
-        if (hint) hint.style.display = "none";
-        wrap.classList.remove("photo-clickable");
-        wrap.onclick = null;
-      };
-    });
-
-    document.querySelectorAll(".photo-clickable").forEach(function(wrap) {
-      wrap.onclick = function() {
-        const fallback = wrap.querySelector(".photo-fallback");
-        if (fallback && fallback.style.display === "flex") return;
-        if (window.PhotoLightbox) {
-          window.PhotoLightbox.open(wrap.dataset.url, wrap.dataset.alt);
-        } else {
-          openFallbackLightbox(wrap.dataset.url, wrap.dataset.alt);
-        }
-      };
-    });
-  }
-
-  async function addPhoto(stage, url) {
-    if (!url) return;
-
-    const input = document.querySelector('.photo-add-input[data-stage="' + stage + '"]');
-    try {
-      new URL(url);
-    } catch {
-      if (input) {
-        input.style.borderColor = "var(--warn)";
-        setTimeout(function() { if (input) input.style.borderColor = ""; }, 2000);
-      }
-      return;
-    }
-
-    const res = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos", {
-      method: "POST",
-      body: JSON.stringify({ stage: stage, url: url })
-    });
-
-    if (res.error) {
-      alert(res.message || "添加失败");
-      return;
-    }
-
-    photosCurrentArchive = sanitizeArchive(res);
-    if (input) input.value = "";
-    renderContent();
-
-    if (typeof window.onPhotosUpdated === "function") {
-      window.onPhotosUpdated(photosCurrentProjectId);
-    }
-  }
-
-  async function deletePhoto(stage, index) {
-    if (!confirm("确定删除这张" + STAGE_LABELS[stage] + "照片吗？")) return;
-
-    const res = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos", {
-      method: "DELETE",
-      body: JSON.stringify({ stage: stage, index: index })
-    });
-
-    if (res.error) {
-      alert(res.message || "删除失败");
-      return;
-    }
-
-    photosCurrentArchive = sanitizeArchive(res);
-    renderContent();
-
-    if (typeof window.onPhotosUpdated === "function") {
-      window.onPhotosUpdated(photosCurrentProjectId);
-    }
-  }
-
-  function openFallbackLightbox(url, alt) {
-    const existing = document.getElementById("photo-lightbox");
-    if (existing) existing.remove();
-
-    const lb = document.createElement("div");
+  function openLightbox(url, alt) {
+    closeLightbox();
+    var lb = document.createElement("div");
     lb.id = "photo-lightbox";
     lb.className = "photo-lightbox";
     lb.innerHTML =
@@ -381,34 +335,33 @@
       '</div>';
     document.body.appendChild(lb);
 
-    const overlay = lb.querySelector(".photo-lightbox-overlay");
-    const closeBtn = lb.querySelector(".photo-lightbox-close");
-    const img = lb.querySelector("img");
-    const fallback = lb.querySelector(".photo-lightbox-fallback");
-    const caption = lb.querySelector(".photo-lightbox-caption");
+    var overlay = lb.querySelector(".photo-lightbox-overlay");
+    var closeBtn = lb.querySelector(".photo-lightbox-close");
+    var img = lb.querySelector("img");
+    var fallback = lb.querySelector(".photo-lightbox-fallback");
 
-    const onKey = function(e) {
-      if (e.key === "Escape") closeFallbackLightbox();
-    };
-
-    overlay.onclick = closeFallbackLightbox;
-    closeBtn.onclick = closeFallbackLightbox;
-    document.addEventListener("keydown", onKey);
-
-    lb._onKey = onKey;
+    overlay.onclick = closeLightbox;
+    closeBtn.onclick = closeLightbox;
 
     img.onerror = function() {
       this.style.display = "none";
+      var caption = this.parentNode.querySelector(".photo-lightbox-caption");
       if (caption) caption.style.display = "none";
       fallback.style.display = "flex";
     };
+
+    document.addEventListener("keydown", onLightboxKey);
   }
 
-  function closeFallbackLightbox() {
-    const lb = document.getElementById("photo-lightbox");
-    if (lb) {
-      if (lb._onKey) document.removeEventListener("keydown", lb._onKey);
-      lb.remove();
+  function onLightboxKey(e) {
+    if (e.key === "Escape") {
+      closeLightbox();
     }
+  }
+
+  function closeLightbox() {
+    var lb = document.getElementById("photo-lightbox");
+    if (lb) lb.remove();
+    document.removeEventListener("keydown", onLightboxKey);
   }
 })();

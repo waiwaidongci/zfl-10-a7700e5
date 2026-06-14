@@ -11,8 +11,6 @@ let users = [];
 let projects = [];
 let intakes = [];
 let materials = [];
-let expandedProjectId = null;
-let detailInstance = null;
 
 async function api(path, options) {
   const headers = { "Content-Type": "application/json" };
@@ -59,7 +57,6 @@ function render() {
 
   projectsEl.innerHTML = visible.map((p) => {
     const cls = isOverdue(p) ? 'overdue' : '';
-    const expanded = expandedProjectId === p.id;
     const latest = getLatestTimeline(p);
     const latestHtml = latest
       ? (latest.type === 'system'
@@ -73,12 +70,8 @@ function render() {
     }
     var photoBadge = photoCount > 0 ? ' <span class="photo-count-badge">' + photoCount + '</span>' : '';
 
-    const articleCls = (expanded ? 'expanded ' : '') + cls;
-    const detailBtnCls = 'card-detail-btn' + (expanded ? ' active' : '');
-    const detailBtnText = expanded ? '收起详情 ▲' : '查看详情 ▼';
-
-    let html =
-      '<article class="' + articleCls + '" data-article-id="' + p.id + '">' +
+    return (
+      '<article class="' + cls + '">' +
       '<div class="row"><h3>' + escapeHtml(p.title) + '</h3><span class="pill ' + statusClass(p.status) + '">' + escapeHtml(p.status) + '</span></div>' +
       '<div class="meta">' + escapeHtml(p.era) + ' · ' + escapeHtml(p.owner) + ' · ' + escapeHtml(p.dueDate) + '</div>' +
       '<div><b>破损</b> ' + escapeHtml(p.damage) + '</div>' +
@@ -92,20 +85,11 @@ function render() {
       '<option>待复核</option>' +
       '<option>已完成</option>' +
       '</select>' +
-      '<button class="' + detailBtnCls + '" data-detail="' + p.id + '">' + detailBtnText + '</button>' +
       '<button class="secondary photo-btn" data-project="' + p.id + '">📷照片' + photoBadge + '</button>' +
       '<button class="secondary timeline-btn" data-project="' + p.id + '">过程时间线</button>' +
       '</div>' +
-      '</article>';
-
-    if (expanded) {
-      html +=
-        '<div class="pdx-wrapper" data-wrapper-id="' + p.id + '">' +
-        '<div class="pdx-container" data-container-id="' + p.id + '"></div>' +
-        '</div>';
-    }
-
-    return html;
+      '</article>'
+    );
   }).join("");
 
   document.querySelectorAll("article select").forEach((select) => {
@@ -130,50 +114,6 @@ function render() {
       if (p && window.Photos) window.Photos.open(p);
     };
   });
-
-  document.querySelectorAll(".card-detail-btn").forEach((btn) => {
-    btn.onclick = () => {
-      const projectId = btn.dataset.detail;
-      if (expandedProjectId === projectId) {
-        expandedProjectId = null;
-        detailInstance = null;
-      } else {
-        expandedProjectId = projectId;
-      }
-      render();
-      if (expandedProjectId) {
-        initDetailView(expandedProjectId);
-      }
-    };
-  });
-}
-
-function initDetailView(projectId) {
-  const container = document.querySelector('[data-container-id="' + projectId + '"]');
-  if (!container) return;
-
-  const p = projects.find((item) => item.id === projectId);
-  if (!p) return;
-
-  if (window.ProjectDetail) {
-    detailInstance = new window.ProjectDetail(container, {
-      project: p,
-      users: users,
-      editable: true,
-      onStatusChange: async (pid, newStatus) => {
-        await api('/api/projects/' + pid, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
-        await load();
-      },
-      onOpenPhotos: (project) => {
-        if (project && window.Photos) window.Photos.open(project);
-      },
-      onOpenTimeline: (project) => {
-        if (project && window.Timeline) window.Timeline.open(project, users);
-      }
-    });
-  } else {
-    container.innerHTML = '<div class="pd-error">ProjectDetail 组件未加载，请刷新页面重试</div>';
-  }
 }
 
 function renderIntakeOptions() {
@@ -300,17 +240,11 @@ async function load() {
 window.onTimelineUpdated = async (projectId) => {
   projects = await api("/api/projects");
   render();
-  if (expandedProjectId === projectId) {
-    initDetailView(projectId);
-  }
 };
 
 window.onPhotosUpdated = async (projectId) => {
   projects = await api("/api/projects");
   render();
-  if (expandedProjectId === projectId) {
-    initDetailView(projectId);
-  }
 };
 
 viewer.onchange = () => {
