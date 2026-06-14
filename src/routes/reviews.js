@@ -1,4 +1,5 @@
 import { parseBody, saveDb, sendJson } from "../db.js";
+import { createSystemRecord } from "../utils/timeline.js";
 
 export async function handleReviews(req, res, db, pathname) {
   const isPendingReview = req.method === "GET" && pathname === "/api/projects/pending-review";
@@ -46,9 +47,20 @@ export async function handleReviews(req, res, db, pathname) {
       reviewedAt: new Date().toISOString().slice(0, 10)
     };
 
+    const oldStatus = project.status;
+    const newStatus = result === "通过" ? "已完成" : "进行中";
+
     project.reviewRecords.push(reviewRecord);
-    project.status = result === "通过" ? "已完成" : "进行中";
+    project.status = newStatus;
     project.updatedAt = new Date().toISOString().slice(0, 10);
+
+    if (!project.timelineRecords) project.timelineRecords = [];
+    project.timelineRecords.push(createSystemRecord({
+      operator: viewer.name,
+      operatorId: viewer.id,
+      oldStatus,
+      newStatus
+    }));
 
     await saveDb(db);
     return sendJson(res, 200, { project, reviewRecord });

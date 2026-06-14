@@ -11,6 +11,7 @@ import { handleProjects } from "./src/routes/projects.js";
 import { handleIntakes } from "./src/routes/intakes.js";
 import { handleMaterials } from "./src/routes/materials.js";
 import { handleReviews } from "./src/routes/reviews.js";
+import { handleTimeline } from "./src/routes/timeline.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "public");
@@ -59,6 +60,8 @@ const server = http.createServer(async (req, res) => {
       if (pathname.startsWith("/api/projects")) {
         const handledReview = await handleReviews(req, res, db, pathname);
         if (handledReview !== false) return;
+        const handledTimeline = await handleTimeline(req, res, db, pathname);
+        if (handledTimeline !== false) return;
         const handled = await handleProjects(req, res, db, pathname);
         if (handled !== false) return;
       }

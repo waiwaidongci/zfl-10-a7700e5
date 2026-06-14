@@ -13,12 +13,29 @@ let intakes = [];
 let materials = [];
 
 async function api(path, options) {
-  const res = await fetch(path, options && options.body ? { ...options, headers: { "Content-Type": "application/json" } } : options);
+  const headers = { "Content-Type": "application/json" };
+  if (viewer && viewer.value) headers["X-Viewer-Id"] = viewer.value;
+  const res = await fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers }));
   return res.json();
 }
 
 function isOverdue(project) {
   return project.status !== "已完成" && new Date(project.dueDate) < new Date(new Date().toISOString().slice(0, 10));
+}
+
+function getLatestTimeline(p) {
+  if (!p.timelineRecords || p.timelineRecords.length === 0) return null;
+  return [...p.timelineRecords].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function statusClass(s) {
+  if (s === '待复核') return 'pending';
+  if (s === '已完成') return 'done';
+  return 'active';
 }
 
 function render() {
@@ -40,19 +57,30 @@ function render() {
 
   projectsEl.innerHTML = visible.map((p) => {
     const cls = isOverdue(p) ? 'overdue' : '';
+    const latest = getLatestTimeline(p);
+    const latestHtml = latest
+      ? (latest.type === 'system'
+          ? '<div class="timeline-latest"><span class="timeline-dot system"></span><b>[系统]</b> ' + escapeHtml(latest.systemMessage) + ' <span class="meta">' + escapeHtml(latest.date) + '</span></div>'
+          : '<div class="timeline-latest"><span class="timeline-dot manual"></span><b>' + escapeHtml(latest.operator) + '</b>：' + escapeHtml(latest.steps).slice(0, 30) + (latest.steps.length > 30 ? '…' : '') + ' <span class="meta">' + escapeHtml(latest.date) + '</span></div>')
+      : '<div class="timeline-empty">暂无过程记录</div>';
+
     return (
       '<article class="' + cls + '">' +
-      '<div class="row"><h3>' + p.title + '</h3><span class="pill">' + p.status + '</span></div>' +
-      '<div class="meta">' + p.era + ' · ' + p.owner + ' · ' + p.dueDate + '</div>' +
-      '<div><b>破损</b> ' + p.damage + '</div>' +
-      '<div><b>步骤</b> ' + p.steps + '</div>' +
-      '<div><b>材料</b> ' + p.materials + '</div>' +
+      '<div class="row"><h3>' + escapeHtml(p.title) + '</h3><span class="pill ' + statusClass(p.status) + '">' + escapeHtml(p.status) + '</span></div>' +
+      '<div class="meta">' + escapeHtml(p.era) + ' · ' + escapeHtml(p.owner) + ' · ' + escapeHtml(p.dueDate) + '</div>' +
+      '<div><b>破损</b> ' + escapeHtml(p.damage) + '</div>' +
+      '<div><b>步骤</b> ' + escapeHtml(p.steps) + '</div>' +
+      '<div><b>材料</b> ' + escapeHtml(p.materials) + '</div>' +
+      latestHtml +
       (isOverdue(p) ? '<div class="danger">已超过预计完成日期</div>' : '') +
+      '<div class="card-actions">' +
       '<select data-id="' + p.id + '">' +
       '<option>进行中</option>' +
       '<option>待复核</option>' +
       '<option>已完成</option>' +
       '</select>' +
+      '<button class="secondary timeline-btn" data-project="' + p.id + '">过程时间线</button>' +
+      '</div>' +
       '</article>'
     );
   }).join("");
@@ -65,6 +93,13 @@ function render() {
       await load();
     };
   });
+
+  document.querySelectorAll(".timeline-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const p = projects.find((item) => item.id === btn.dataset.project);
+      if (p && window.Timeline) window.Timeline.open(p, users);
+    };
+  });
 }
 
 function renderIntakeOptions() {
@@ -75,7 +110,7 @@ function renderIntakeOptions() {
   }
   intakeSelect.innerHTML =
     '<option value="">选择入库记录带入信息</option>' +
-    pendingIntakes.map((i) => '<option value="' + i.id + '">' + i.title + '（' + i.era + '）</option>').join("");
+    pendingIntakes.map((i) => '<option value="' + i.id + '">' + escapeHtml(i.title) + '（' + escapeHtml(i.era) + '）</option>').join("");
 }
 
 function onIntakeChange() {
@@ -92,10 +127,10 @@ function onIntakeChange() {
   form.damage.value = intake.damage || '';
 
   intakeInfo.innerHTML =
-    '<b>来源：</b>' + intake.source + '<br>' +
-    '<b>接收人：</b>' + intake.receiver + '<br>' +
-    '<b>接收时间：</b>' + intake.receivedAt + '<br>' +
-    '<b>存放位置：</b>' + intake.tempLocation;
+    '<b>来源：</b>' + escapeHtml(intake.source) + '<br>' +
+    '<b>接收人：</b>' + escapeHtml(intake.receiver) + '<br>' +
+    '<b>接收时间：</b>' + escapeHtml(intake.receivedAt) + '<br>' +
+    '<b>存放位置：</b>' + escapeHtml(intake.tempLocation);
   intakeInfo.style.display = 'block';
 }
 
@@ -109,8 +144,8 @@ function renderMaterialCheckboxes() {
     const cls = low ? 'low-stock' : '';
     return (
       '<label class="' + cls + '">' +
-      '<input type="checkbox" value="' + m.id + '" data-name="' + m.name + '">' +
-      m.name + '（' + m.quantity + m.unit + '）' +
+      '<input type="checkbox" value="' + m.id + '" data-name="' + escapeHtml(m.name) + '">' +
+      escapeHtml(m.name) + '（' + m.quantity + escapeHtml(m.unit) + '）' +
       '</label>'
     );
   }).join('');
@@ -157,7 +192,7 @@ function updateStockHint(selectedMaterials) {
   let html = '<b>已选材料库存：</b><br>';
   selectedMaterials.forEach((m) => {
     const low = m.quantity <= m.lowStockThreshold;
-    html += '· ' + m.name + '：' + m.quantity + m.unit;
+    html += '· ' + escapeHtml(m.name) + '：' + m.quantity + escapeHtml(m.unit);
     if (low) {
       html += ' <span class="low">（库存不足）</span>';
     }
@@ -178,15 +213,25 @@ async function load() {
   intakes = await api("/api/intakes");
   materials = await api("/api/materials");
 
-  viewer.innerHTML = users.map((u) => '<option value="' + u.id + '">' + u.name + ' · ' + u.role + '</option>').join("");
+  viewer.innerHTML = users.map((u) => '<option value="' + u.id + '">' + escapeHtml(u.name) + ' · ' + escapeHtml(u.role) + '</option>').join("");
   if (!viewer.value) viewer.value = users[0].id;
+
+  if (window.Timeline) window.Timeline.setUser(users.find(u => u.id === viewer.value) || users[0]);
 
   renderIntakeOptions();
   renderMaterialCheckboxes();
   render();
 }
 
-viewer.onchange = render;
+window.onTimelineUpdated = async (projectId) => {
+  projects = await api("/api/projects");
+  render();
+};
+
+viewer.onchange = () => {
+  if (window.Timeline) window.Timeline.setUser(users.find(u => u.id === viewer.value) || users[0]);
+  render();
+};
 intakeSelect.onchange = onIntakeChange;
 
 form.onsubmit = async (event) => {

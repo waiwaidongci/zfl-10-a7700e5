@@ -26,10 +26,51 @@
       "materials": "楮皮纸、小麦淀粉浆",
       "owner": "顾眉",
       "dueDate": "2026-06-22",
-      "status": "进行中",
+      "status": "待复核",
       "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      "updatedAt": "2026-06-11",
-      "reviewRecords": []
+      "updatedAt": "2026-06-14",
+      "reviewRecords": [],
+      "timelineRecords": [
+        {
+          "id": "T-1781395167712-k958cs",
+          "type": "manual",
+          "operator": "顾眉",
+          "operatorId": "u-mei",
+          "date": "2026-06-13",
+          "steps": "完成虫蛀区域清洁，使用软毛刷清除表面灰尘",
+          "materials": "楮皮纸",
+          "notes": "虫蛀区域较为集中，需要重点补纸",
+          "photoUrl": "",
+          "systemMessage": "",
+          "createdAt": "2026-06-13T23:59:27.712Z"
+        },
+        {
+          "id": "T-1781395197575-gf9q20",
+          "type": "system",
+          "operator": "顾眉",
+          "operatorId": "u-mei",
+          "date": "2026-06-13",
+          "steps": "状态自动流转",
+          "materials": "",
+          "notes": "",
+          "photoUrl": "",
+          "systemMessage": "状态变更：进行中 → 待复核",
+          "createdAt": "2026-06-13T23:59:57.575Z"
+        },
+        {
+          "id": "T-1781396509874-9y14gy",
+          "type": "manual",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-14",
+          "steps": "补纸完成，使用楮皮纸对虫蛀区域进行托裱",
+          "materials": "楮皮纸、小麦淀粉浆",
+          "notes": "托裱后需自然阴干，避免阳光直射",
+          "photoUrl": "",
+          "systemMessage": "",
+          "createdAt": "2026-06-14T00:21:49.874Z"
+        }
+      ]
     },
     {
       "id": "R-002",
@@ -65,7 +106,8 @@
           "result": "通过",
           "reviewedAt": "2026-06-13"
         }
-      ]
+      ],
+      "timelineRecords": []
     }
   ],
   "intakes": [

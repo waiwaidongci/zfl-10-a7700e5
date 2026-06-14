@@ -411,3 +411,259 @@ nav.tabs a.active {
     width: 100%;
   }
 }
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.card-actions select {
+  flex: 1;
+}
+
+.card-actions .timeline-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.timeline-latest {
+  background: #f5f0e5;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.timeline-latest-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-latest-body {
+  color: #5d574e;
+  margin-top: 2px;
+}
+
+.timeline-empty {
+  background: #faf7f0;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #8a8278;
+  text-align: center;
+}
+
+.timeline-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.timeline-dot.manual {
+  background: var(--accent);
+}
+
+.timeline-dot.system {
+  background: #8a8278;
+}
+
+.timeline-actions {
+  margin-bottom: 14px;
+}
+
+.timeline-actions button {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.timeline-form {
+  margin-bottom: 16px;
+}
+
+.timeline-form h4 {
+  font-size: 15px;
+}
+
+.timeline-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.timeline-form-actions button {
+  padding: 8px 18px;
+  font-size: 13px;
+}
+
+.timeline-alert {
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.timeline-alert.error {
+  background: #fff0e8;
+  border: 1px solid #e0a080;
+  color: var(--warn);
+}
+
+.timeline-alert.success {
+  background: #e6efe8;
+  border: 1px solid #85b090;
+  color: var(--success);
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timeline-empty-full {
+  text-align: center;
+  padding: 32px 16px;
+  color: #8a8278;
+  font-size: 13px;
+  background: #faf7f0;
+  border-radius: 6px;
+  border: 1px dashed var(--line);
+}
+
+.timeline-item {
+  display: flex;
+  gap: 12px;
+}
+
+.timeline-item-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.timeline-item-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+  border: 2px solid #fff;
+  box-sizing: content-box;
+}
+
+.timeline-item-dot.manual {
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.timeline-item-dot.system {
+  background: #8a8278;
+  box-shadow: 0 0 0 1px #8a8278;
+}
+
+.timeline-item-connector {
+  flex: 1;
+  width: 2px;
+  background: var(--line);
+  margin: 2px 0;
+  min-height: 20px;
+}
+
+.timeline-item-body {
+  flex: 1;
+  background: #faf7f0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.timeline-item.system .timeline-item-body {
+  background: #f5f0e5;
+  border-color: #e0d8c8;
+}
+
+.timeline-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.timeline-item-head b {
+  font-size: 14px;
+}
+
+.timeline-item-date {
+  margin-left: auto;
+  color: #8a8278;
+  font-size: 12px;
+}
+
+.timeline-badge {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.timeline-badge.manual {
+  background: #e6f0f2;
+  color: var(--accent);
+}
+
+.timeline-badge.system {
+  background: #ece8de;
+  color: #6b6258;
+}
+
+.timeline-item-row {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.timeline-item-row a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.timeline-item-row a:hover {
+  text-decoration: underline;
+}
+
+.tl-label {
+  width: 68px;
+  color: #8a8278;
+  flex-shrink: 0;
+  font-size: 12px;
+  padding-top: 1px;
+}
+
+@media (max-width: 600px) {
+  .card-actions {
+    flex-direction: column;
+  }
+  .card-actions .timeline-btn {
+    width: 100%;
+  }
+}
