@@ -213,7 +213,7 @@ function initDetailView(projectId) {
 }
 
 function renderIntakeOptions() {
-  const pendingIntakes = intakes.filter((i) => i.status === "待修复");
+  const pendingIntakes = intakes.filter((i) => i.status === "待修复" && !i.projectId);
   if (pendingIntakes.length === 0) {
     intakeSelect.innerHTML = '<option value="">暂无可选入库记录</option>';
     return;

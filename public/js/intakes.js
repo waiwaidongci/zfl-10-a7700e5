@@ -34,12 +34,12 @@ function render() {
   intakesEl.innerHTML = intakes.map((i) => {
     let linkedHtml = '';
     if (i.status === '已立项' && i.projectId) {
-      linkedHtml = '<div class="intake-linked"><b>已关联项目：</b>' + escapeHtml(i.projectId) + '</div>';
+      linkedHtml = '<div class="intake-linked"><b>已关联项目：</b><a class="project-link" href="/" target="_blank">' + escapeHtml(i.projectId) + ' ↗</a></div>';
     }
 
     let statusBtnHtml = '';
     if (i.status === '已立项') {
-      statusBtnHtml = '<span class="pill linked">已立项</span>';
+      statusBtnHtml = '<button class="secondary" disabled style="opacity:0.6;cursor:not-allowed;">已立项</button>';
     } else {
       statusBtnHtml = '<button class="secondary" data-action="status" data-id="' + escapeHtml(i.id) + '">更新状态</button>';
     }

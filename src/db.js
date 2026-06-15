@@ -82,8 +82,8 @@ const seed = {
   offlineDrafts: [],
   syncQueue: [],
   intakes: [
-    { id: "I-001", title: "宋版文选残卷", era: "宋代", source: "私人捐赠", receiver: "顾眉", receivedAt: "2026-06-10", damage: "封面缺失、书页霉斑", tempLocation: "A柜-3层", status: "待修复", createdAt: "2026-06-10" },
-    { id: "I-002", title: "民国线装诗集", era: "民国", source: "图书馆移交", receiver: "严澈", receivedAt: "2026-06-12", damage: "书脊开裂、部分页脱胶", tempLocation: "B柜-1层", status: "待修复", createdAt: "2026-06-12" }
+    { id: "I-001", title: "宋版文选残卷", era: "宋代", source: "私人捐赠", receiver: "顾眉", receivedAt: "2026-06-10", damage: "封面缺失、书页霉斑", tempLocation: "A柜-3层", status: "待修复", createdAt: "2026-06-10", projectId: null },
+    { id: "I-002", title: "民国线装诗集", era: "民国", source: "图书馆移交", receiver: "严澈", receivedAt: "2026-06-12", damage: "书脊开裂、部分页脱胶", tempLocation: "B柜-1层", status: "待修复", createdAt: "2026-06-12", projectId: null }
   ],
   materials: [
     { id: "M-001", name: "楮皮纸", unit: "张", quantity: 500, lowStockThreshold: 100, updatedAt: "2026-06-10" },
@@ -156,7 +156,7 @@ export async function loadDb() {
         createdAt: tpl.createdAt
       });
     }
-    initialDb._meta = { schemaVersion: 4, migrations: [{ version: 2, appliedAt: new Date().toISOString() }, { version: 3, appliedAt: new Date().toISOString() }, { version: 4, appliedAt: new Date().toISOString() }] };
+    initialDb._meta = { schemaVersion: 5, migrations: [{ version: 2, appliedAt: new Date().toISOString() }, { version: 3, appliedAt: new Date().toISOString() }, { version: 4, appliedAt: new Date().toISOString() }, { version: 5, appliedAt: new Date().toISOString() }] };
     for (const project of initialDb.projects) {
       project.templateSnapshot = null;
     }

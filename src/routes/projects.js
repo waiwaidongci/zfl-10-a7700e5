@@ -47,8 +47,18 @@ export async function handleProjects(req, res, db, pathname) {
 
   if (req.method === "POST" && pathname === "/api/projects") {
     const rawInput = await parseBody(req);
-    const intakeId = rawInput.intakeId || null;
+    const intakeId = rawInput.intakeId ? String(rawInput.intakeId).trim() : null;
     const input = sanitizeProjectInput(rawInput);
+
+    if (intakeId) {
+      const intake = db.intakes.find((i) => i.id === intakeId);
+      if (!intake) {
+        return sendJson(res, 404, { error: "intake_not_found", errors: ["入库记录不存在"] });
+      }
+      if (intake.status === "已立项" || intake.projectId) {
+        return sendJson(res, 400, { error: "intake_already_linked", errors: ["该入库记录已关联项目，不可重复立项"] });
+      }
+    }
 
     let templateSnapshot = null;
     if (input.templateId) {
