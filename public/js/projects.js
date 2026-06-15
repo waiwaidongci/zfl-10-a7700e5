@@ -506,9 +506,6 @@ function initSyncComponents() {
   });
 
   window.onSyncComplete = async () => {
-    if (window.SyncManager) {
-      await window.SyncManager.uploadAllLocalDrafts();
-    }
     await load();
   };
 

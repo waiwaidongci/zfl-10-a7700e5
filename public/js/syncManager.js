@@ -309,41 +309,56 @@ window.SyncManager = {
   },
 
   async queueAndSync(draftIds) {
-    const queueResults = this.addToSyncQueue(draftIds);
-    const queued = queueResults.filter(r => r.status === 'queued');
-
     const results = [];
-    for (const q of queued) {
+    for (const draftId of draftIds) {
       try {
-        const result = await this.executeSync(q.queueId);
+        const serverDraft = await this.uploadDraft(draftId);
+        const queueResponse = await this.api('/api/sync/queue', {
+          method: 'POST',
+          body: JSON.stringify({ draftIds: [serverDraft.id] }),
+          allowOffline: false
+        });
+        const queued = queueResponse.results && queueResponse.results[0];
+
+        if (!queued || !queued.queueId) {
+          results.push({
+            draftId,
+            status: 'failed',
+            error: queued?.status || '服务端入队失败'
+          });
+          continue;
+        }
+
+        const result = await this.executeSync(queued.queueId);
         if (result._conflictResponse) {
           results.push({
-          queueId: q.queueId,
-          draftId: q.draftId,
-          status: 'conflict',
-          conflict: result.conflict || result
+            queueId: queued.queueId,
+            draftId,
+            serverDraftId: serverDraft.id,
+            status: 'conflict',
+            conflict: result.conflict || result
           });
         } else if (result.success) {
           results.push({
-          queueId: q.queueId,
-          draftId: q.draftId,
-          status: 'success',
-          result
+            queueId: queued.queueId,
+            draftId,
+            serverDraftId: serverDraft.id,
+            status: 'success',
+            result
           });
-          this.removeFromSyncQueue(q.queueId);
-          this.deleteDraft(q.draftId);
+          this.deleteDraft(draftId);
         } else {
           results.push({
-          queueId: q.queueId,
-          draftId: q.draftId,
-          status: 'failed',
-          error: result.error || result.message || '同步失败'
+            queueId: queued.queueId,
+            draftId,
+            serverDraftId: serverDraft.id,
+            status: 'failed',
+            error: result.error || result.message || '同步失败'
           });
         }
       } catch (error) {
         results.push({
-          queueId: q.queueId,
-          draftId: q.draftId,
+          draftId,
           status: 'failed',
           error: error.message
         });
