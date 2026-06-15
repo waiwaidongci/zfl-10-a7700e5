@@ -152,28 +152,55 @@ async function submitRecord() {
     photoUrl: document.getElementById('tf-photo').value
   };
 
-  const res = await api('/api/projects/' + currentProjectId + '/timeline', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
+  const submitBtn = document.getElementById('tf-submit');
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = '保存中...';
+  submitBtn.disabled = true;
 
-  if (res.error) {
-    let msg = res.message || '操作失败';
-    if (res.errors && res.errors.length) {
-      msg += '：' + res.errors.map(e => e.message).join('；');
+  try {
+    const res = await api('/api/projects/' + currentProjectId + '/timeline', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    if (res._savedAsDraft) {
+      showAlert('网络不可用，已保存为本地草稿', false);
+      document.getElementById('timeline-form-wrap').style.display = 'none';
+      document.getElementById('timeline-add-btn').style.display = 'inline-block';
+      if (typeof window.onTimelineUpdated === 'function') {
+        window.onTimelineUpdated(currentProjectId, currentRecords);
+      }
+      return;
     }
-    showAlert(msg, true);
-    return;
-  }
 
-  showAlert('记录已添加', false);
-  currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
-  document.getElementById('timeline-form-wrap').style.display = 'none';
-  document.getElementById('timeline-add-btn').style.display = 'inline-block';
-  renderList();
+    if (res.conflict) {
+      showAlert('检测到版本冲突，请在同步管理中处理', true);
+      return;
+    }
 
-  if (typeof window.onTimelineUpdated === 'function') {
-    window.onTimelineUpdated(currentProjectId, currentRecords);
+    if (res.error) {
+      let msg = res.message || '操作失败';
+      if (res.errors && res.errors.length) {
+        msg += '：' + res.errors.map(e => e.message).join('；');
+      }
+      showAlert(msg, true);
+      return;
+    }
+
+    showAlert('记录已添加', false);
+    currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
+    document.getElementById('timeline-form-wrap').style.display = 'none';
+    document.getElementById('timeline-add-btn').style.display = 'inline-block';
+    renderList();
+
+    if (typeof window.onTimelineUpdated === 'function') {
+      window.onTimelineUpdated(currentProjectId, currentRecords);
+    }
+  } catch (error) {
+    showAlert(error.message || '保存失败', true);
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
   }
 }
 

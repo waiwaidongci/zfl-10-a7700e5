@@ -1,0 +1,443 @@
+import { parseBody, saveDb, sendJson } from "../db.js";
+import { getViewer } from "../utils/permissions.js";
+import { deepClone } from "../utils/diff.js";
+import { recordAudit, ACTION_TYPES, SOURCES } from "../utils/audit.js";
+import { createSystemRecord } from "../utils/timeline.js";
+import {
+  createProjectDraft,
+  createTimelineDraft,
+  detectProjectConflict,
+  detectTimelineConflict,
+  resolveConflict,
+  addToSyncQueue,
+  removeFromSyncQueue,
+  getPendingSyncItems,
+  getDraftsByUser,
+  saveDraft,
+  deleteDraft,
+  incrementVersion
+} from "../utils/sync.js";
+
+function sanitizeProjectInput(input) {
+  const out = {};
+  if (input.title !== undefined) out.title = String(input.title).trim();
+  if (input.era !== undefined) out.era = String(input.era).trim();
+  if (input.damage !== undefined) out.damage = String(input.damage).trim();
+  if (input.steps !== undefined) out.steps = String(input.steps).trim();
+  if (input.materials !== undefined) out.materials = String(input.materials).trim();
+  if (input.owner !== undefined) out.owner = String(input.owner).trim();
+  if (input.dueDate !== undefined) out.dueDate = String(input.dueDate).trim();
+  if (input.photos !== undefined) out.photos = String(input.photos || "").trim();
+  if (input.status !== undefined) out.status = String(input.status).trim();
+  return out;
+}
+
+function sanitizeTimelineInput(input) {
+  const out = {};
+  if (input.operator !== undefined) out.operator = String(input.operator).trim();
+  if (input.date !== undefined) out.date = String(input.date).trim();
+  if (input.steps !== undefined) out.steps = String(input.steps).trim();
+  if (input.materials !== undefined) out.materials = String(input.materials || "").trim();
+  if (input.notes !== undefined) out.notes = String(input.notes || "").trim();
+  if (input.photoUrl !== undefined) out.photoUrl = String(input.photoUrl || "").trim();
+  return out;
+}
+
+export async function handleSync(req, res, db, pathname) {
+  const viewerId = req.headers["x-viewer-id"];
+  const viewer = getViewer(db, viewerId);
+
+  if (pathname === "/api/sync/drafts" && req.method === "GET") {
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized" });
+    const drafts = getDraftsByUser(db, viewerId);
+    return sendJson(res, 200, drafts);
+  }
+
+  if (pathname === "/api/sync/drafts" && req.method === "POST") {
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized" });
+    const input = await parseBody(req);
+    const { type, projectId, data } = input;
+
+    let draft;
+    if (type === "project") {
+      const sanitized = sanitizeProjectInput(data);
+      draft = createProjectDraft(sanitized, viewerId);
+    } else if (type === "timeline" && projectId) {
+      const sanitized = sanitizeTimelineInput(data);
+      draft = createTimelineDraft(projectId, sanitized, viewerId);
+    } else {
+      return sendJson(res, 400, { error: "invalid_draft_type" });
+    }
+
+    saveDraft(db, draft);
+    await saveDb(db);
+    return sendJson(res, 201, draft);
+  }
+
+  const draftMatch = pathname.match(/^\/api\/sync\/drafts\/([^/]+)$/);
+  if (draftMatch) {
+    const draftId = draftMatch[1];
+    const draft = db.offlineDrafts.find(d => d.id === draftId);
+
+    if (!draft) return sendJson(res, 404, { error: "draft_not_found" });
+    if (draft.createdBy !== viewerId && viewer?.role !== "admin") {
+      return sendJson(res, 403, { error: "forbidden" });
+    }
+
+    if (req.method === "GET") {
+      return sendJson(res, 200, draft);
+    }
+
+    if (req.method === "PUT") {
+      const input = await parseBody(req);
+      let changed = false;
+      if (input.data) {
+        draft.data = deepClone(input.data);
+        changed = true;
+      }
+      if (input.operation !== undefined) {
+        draft.operation = input.operation;
+        changed = true;
+      }
+      if (input.entityId !== undefined) {
+        draft.entityId = input.entityId;
+        changed = true;
+      }
+      if (input.baseVersion !== undefined) {
+        draft.baseVersion = input.baseVersion;
+        changed = true;
+      }
+      if (changed) {
+        draft.updatedAt = new Date().toISOString();
+        saveDraft(db, draft);
+        await saveDb(db);
+      }
+      return sendJson(res, 200, draft);
+    }
+
+    if (req.method === "DELETE") {
+      deleteDraft(db, draftId);
+      removeFromSyncQueue(db, draftId);
+      await saveDb(db);
+      return sendJson(res, 200, { deleted: draftId });
+    }
+  }
+
+  if (pathname === "/api/sync/queue" && req.method === "GET") {
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized" });
+    const items = getPendingSyncItems(db, viewerId);
+    return sendJson(res, 200, items);
+  }
+
+  if (pathname === "/api/sync/queue" && req.method === "POST") {
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized" });
+    const input = await parseBody(req);
+    const { draftIds } = input;
+
+    if (!Array.isArray(draftIds) || draftIds.length === 0) {
+      return sendJson(res, 400, { error: "draft_ids_required" });
+    }
+
+    const results = [];
+    for (const draftId of draftIds) {
+      const draft = db.offlineDrafts.find(d => d.id === draftId);
+      if (draft && draft.createdBy === viewerId) {
+        const existing = db.syncQueue.find(q => q.draftId === draftId);
+        if (!existing) {
+          const queueItem = addToSyncQueue(db, draft, viewerId);
+          results.push({ draftId, queueId: queueItem.id, status: "queued" });
+        } else {
+          results.push({ draftId, queueId: existing.id, status: "already_queued" });
+        }
+      } else {
+        results.push({ draftId, status: "not_found_or_forbidden" });
+      }
+    }
+
+    await saveDb(db);
+    return sendJson(res, 200, { results });
+  }
+
+  if (pathname === "/api/sync/detect-conflicts" && req.method === "POST") {
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized" });
+    const input = await parseBody(req);
+    const { draftIds } = input;
+
+    if (!Array.isArray(draftIds)) {
+      return sendJson(res, 400, { error: "draft_ids_required" });
+    }
+
+    const conflicts = [];
+    for (const draftId of draftIds) {
+      const draft = db.offlineDrafts.find(d => d.id === draftId);
+      if (!draft || draft.createdBy !== viewerId) continue;
+
+      if (draft.type === "project") {
+        const serverProject = db.projects.find(p => p.id === draft.entityId);
+        const conflict = detectProjectConflict(draft, serverProject);
+        if (conflict) conflicts.push(conflict);
+      } else if (draft.type === "timeline") {
+        const project = db.projects.find(p => p.id === draft.projectId);
+        const conflict = detectTimelineConflict(draft, project?.timelineRecords);
+        if (conflict) conflicts.push(conflict);
+      }
+    }
+
+    return sendJson(res, 200, { conflicts });
+  }
+
+  if (pathname === "/api/sync/execute" && req.method === "POST") {
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized" });
+    const input = await parseBody(req);
+    const { queueItemId, resolution, resolutionFields } = input;
+
+    const queueItem = db.syncQueue.find(q => q.id === queueItemId);
+    if (!queueItem) return sendJson(res, 404, { error: "queue_item_not_found" });
+    if (queueItem.createdBy !== viewerId && viewer?.role !== "admin") {
+      return sendJson(res, 403, { error: "forbidden" });
+    }
+
+    const draft = db.offlineDrafts.find(d => d.id === queueItem.draftId);
+    if (!draft) {
+      removeFromSyncQueue(db, queueItemId);
+      await saveDb(db);
+      return sendJson(res, 404, { error: "draft_not_found" });
+    }
+
+    let conflict = null;
+    if (queueItem.type === "project") {
+      const serverProject = db.projects.find(p => p.id === queueItem.entityId);
+      conflict = detectProjectConflict(draft, serverProject);
+    } else if (queueItem.type === "timeline") {
+      const project = db.projects.find(p => p.id === queueItem.projectId);
+      conflict = detectTimelineConflict(draft, project?.timelineRecords);
+    }
+
+    if (conflict && !resolution) {
+      return sendJson(res, 409, {
+        error: "conflict_detected",
+        message: "检测到同步冲突，请选择解决方式",
+        conflict
+      });
+    }
+
+    let resultData;
+    if (queueItem.type === "project") {
+      resultData = await syncProject(db, queueItem, draft, conflict, resolution, resolutionFields, viewer);
+    } else if (queueItem.type === "timeline") {
+      resultData = await syncTimeline(db, queueItem, draft, conflict, resolution, resolutionFields, viewer);
+    }
+
+    if (resultData.success) {
+      removeFromSyncQueue(db, queueItemId);
+      deleteDraft(db, draft.id);
+      draft.status = "synced";
+      draft.syncAttempts += 1;
+      draft.lastSyncError = null;
+    } else {
+      draft.status = "failed";
+      draft.syncAttempts += 1;
+      draft.lastSyncError = resultData.error;
+      saveDraft(db, draft);
+    }
+
+    await saveDb(db);
+
+    if (resultData.success) {
+      return sendJson(res, 200, {
+        success: true,
+        type: queueItem.type,
+        entity: resultData.entity
+      });
+    } else {
+      return sendJson(res, 500, {
+        success: false,
+        error: resultData.error
+      });
+    }
+  }
+
+  if (pathname === "/api/sync/status" && req.method === "GET") {
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized" });
+    const drafts = getDraftsByUser(db, viewerId);
+    const queue = getPendingSyncItems(db, viewerId);
+    const stats = {
+      totalDrafts: drafts.length,
+      pendingDrafts: drafts.filter(d => d.status === "pending").length,
+      failedDrafts: drafts.filter(d => d.status === "failed").length,
+      queuedItems: queue.length
+    };
+    return sendJson(res, 200, { stats, drafts, queue });
+  }
+
+  if (pathname === "/api/sync/simulate-failure" && req.method === "POST") {
+    if (!viewer || viewer.role !== "admin") {
+      return sendJson(res, 403, { error: "forbidden" });
+    }
+    const input = await parseBody(req);
+    const { projectId, field, value } = input;
+
+    const project = db.projects.find(p => p.id === projectId);
+    if (!project) return sendJson(res, 404, { error: "project_not_found" });
+
+    const beforeState = deepClone(project);
+    if (field && value !== undefined) {
+      project[field] = value;
+    }
+    incrementVersion(project);
+    project.updatedAt = new Date().toISOString().slice(0, 10);
+
+    recordAudit(db, {
+      projectId,
+      actionType: ACTION_TYPES.PROJECT_UPDATE,
+      operator: viewer.name,
+      operatorId: viewerId,
+      source: SOURCES.API,
+      beforeState,
+      afterState: deepClone(project),
+      note: "[测试] 模拟他人修改项目以制造冲突"
+    });
+
+    await saveDb(db);
+    return sendJson(res, 200, { project, modified: { field, value } });
+  }
+
+  return false;
+}
+
+async function syncProject(db, queueItem, draft, conflict, resolution, resolutionFields, viewer) {
+  try {
+    let projectData = draft.data;
+
+    if (conflict) {
+      const res = resolution === "custom" ? { fields: resolutionFields } : resolution;
+      projectData = resolveConflict(conflict, res, draft, db);
+    }
+
+    const sanitized = sanitizeProjectInput(projectData);
+    let project;
+    const beforeState = {};
+
+    if (queueItem.operation === "create") {
+      project = {
+        id: `R-${Date.now()}`,
+        status: "进行中",
+        updatedAt: new Date().toISOString().slice(0, 10),
+        version: 1,
+        reviewRecords: [],
+        timelineRecords: [],
+        photoArchive: { before: [], during: [], after: [] },
+        templateSnapshot: null,
+        ...sanitized
+      };
+      db.projects.unshift(project);
+
+      recordAudit(db, {
+        projectId: project.id,
+        actionType: ACTION_TYPES.PROJECT_CREATE,
+        operator: viewer.name,
+        operatorId: viewer.id,
+        source: SOURCES.SYNC,
+        beforeState: null,
+        afterState: deepClone(project),
+        note: "从离线草稿同步创建"
+      });
+    } else {
+      project = db.projects.find(p => p.id === queueItem.entityId);
+      if (!project) return { success: false, error: "project_not_found" };
+
+      Object.assign(beforeState, project);
+
+      const oldStatus = project.status;
+      incrementVersion(project);
+      Object.assign(project, sanitized, {
+        updatedAt: new Date().toISOString().slice(0, 10)
+      });
+
+      const statusChanged = sanitized.status && sanitized.status !== oldStatus;
+      if (statusChanged && project.timelineRecords) {
+        project.timelineRecords.push(createSystemRecord({
+          operator: viewer.name,
+          operatorId: viewer.id,
+          oldStatus,
+          newStatus: sanitized.status
+        }));
+      }
+
+      const actionType = statusChanged ? ACTION_TYPES.STATUS_CHANGE : ACTION_TYPES.PROJECT_UPDATE;
+      recordAudit(db, {
+        projectId: project.id,
+        actionType,
+        operator: viewer.name,
+        operatorId: viewer.id,
+        source: SOURCES.SYNC,
+        beforeState: deepClone(beforeState),
+        afterState: deepClone(project),
+        note: conflict ? "同步（已解决冲突）" : "从离线草稿同步更新"
+      });
+    }
+
+    return { success: true, entity: project };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function syncTimeline(db, queueItem, draft, conflict, resolution, resolutionFields, viewer) {
+  try {
+    const project = db.projects.find(p => p.id === queueItem.projectId);
+    if (!project) return { success: false, error: "project_not_found" };
+
+    let timelineData = draft.data;
+    if (conflict) {
+      const res = resolution === "custom" ? { fields: resolutionFields } : resolution;
+      timelineData = resolveConflict(conflict, res, draft, db);
+    }
+
+    const sanitized = sanitizeTimelineInput(timelineData);
+
+    const record = {
+      id: queueItem.entityId || `T-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      type: "manual",
+      version: 1,
+      createdAt: new Date().toISOString(),
+      operatorId: viewer.id,
+      ...sanitized
+    };
+
+    const beforeState = deepClone(project);
+
+    if (!project.timelineRecords) project.timelineRecords = [];
+
+    if (queueItem.operation === "update") {
+      const idx = project.timelineRecords.findIndex(r => r.id === queueItem.entityId);
+      if (idx !== -1) {
+        record.version = (project.timelineRecords[idx].version || 1) + 1;
+        record.createdAt = project.timelineRecords[idx].createdAt;
+        project.timelineRecords[idx] = record;
+      } else {
+        project.timelineRecords.push(record);
+      }
+    } else {
+      project.timelineRecords.push(record);
+    }
+
+    incrementVersion(project);
+    project.updatedAt = new Date().toISOString().slice(0, 10);
+
+    recordAudit(db, {
+      projectId: project.id,
+      actionType: ACTION_TYPES.PROJECT_UPDATE,
+      operator: viewer.name,
+      operatorId: viewer.id,
+      source: SOURCES.SYNC,
+      beforeState,
+      afterState: deepClone(project),
+      note: conflict ? "同步过程记录（已解决冲突）" : "同步过程记录"
+    });
+
+    return { success: true, entity: record };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}

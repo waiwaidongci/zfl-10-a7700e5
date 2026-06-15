@@ -62,6 +62,10 @@ function validateDbStructure(db) {
     errors.push("templateVersions 字段缺失或不是数组");
   if (!Array.isArray(db.auditLogs))
     errors.push("auditLogs 字段缺失或不是数组");
+  if (!Array.isArray(db.offlineDrafts))
+    errors.push("offlineDrafts 字段缺失或不是数组");
+  if (!Array.isArray(db.syncQueue))
+    errors.push("syncQueue 字段缺失或不是数组");
   return errors;
 }
 
@@ -72,9 +76,11 @@ const seed = {
     { id: "u-yan", name: "严澈", role: "worker" }
   ],
   projects: [
-    { id: "R-001", title: "明代族谱散页", era: "明代", damage: "虫蛀、边角缺失", steps: "清洁、补纸、压平", materials: "楮皮纸、小麦淀粉浆", owner: "顾眉", dueDate: "2026-06-22", status: "进行中", photos: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f", updatedAt: "2026-06-11", reviewRecords: [], timelineRecords: [], photoArchive: { before: ["https://images.unsplash.com/photo-1524995997946-a1c2e315a42f", "https://images.unsplash.com/photo-1506744038136-46273834b3fb"], during: ["https://images.unsplash.com/photo-1466442929976-97f336a657be"], after: [] } },
-    { id: "R-002", title: "清刻本医书", era: "清代", damage: "水渍、书脊松散", steps: "拆线、干洗、重装", materials: "棉线、宣纸", owner: "严澈", dueDate: "2026-06-12", status: "待复核", photos: "", updatedAt: "2026-06-10", reviewRecords: [], timelineRecords: [], photoArchive: { before: [], during: [], after: [] } }
+    { id: "R-001", title: "明代族谱散页", era: "明代", damage: "虫蛀、边角缺失", steps: "清洁、补纸、压平", materials: "楮皮纸、小麦淀粉浆", owner: "顾眉", dueDate: "2026-06-22", status: "进行中", photos: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f", updatedAt: "2026-06-11", version: 1, reviewRecords: [], timelineRecords: [], photoArchive: { before: ["https://images.unsplash.com/photo-1524995997946-a1c2e315a42f", "https://images.unsplash.com/photo-1506744038136-46273834b3fb"], during: ["https://images.unsplash.com/photo-1466442929976-97f336a657be"], after: [] } },
+    { id: "R-002", title: "清刻本医书", era: "清代", damage: "水渍、书脊松散", steps: "拆线、干洗、重装", materials: "棉线、宣纸", owner: "严澈", dueDate: "2026-06-12", status: "待复核", photos: "", updatedAt: "2026-06-10", version: 1, reviewRecords: [], timelineRecords: [], photoArchive: { before: [], during: [], after: [] } }
   ],
+  offlineDrafts: [],
+  syncQueue: [],
   intakes: [
     { id: "I-001", title: "宋版文选残卷", era: "宋代", source: "私人捐赠", receiver: "顾眉", receivedAt: "2026-06-10", damage: "封面缺失、书页霉斑", tempLocation: "A柜-3层", status: "待修复", createdAt: "2026-06-10" },
     { id: "I-002", title: "民国线装诗集", era: "民国", source: "图书馆移交", receiver: "严澈", receivedAt: "2026-06-12", damage: "书脊开裂、部分页脱胶", tempLocation: "B柜-1层", status: "待修复", createdAt: "2026-06-12" }
@@ -150,7 +156,7 @@ export async function loadDb() {
         createdAt: tpl.createdAt
       });
     }
-    initialDb._meta = { schemaVersion: 3, migrations: [{ version: 2, appliedAt: new Date().toISOString() }, { version: 3, appliedAt: new Date().toISOString() }] };
+    initialDb._meta = { schemaVersion: 4, migrations: [{ version: 2, appliedAt: new Date().toISOString() }, { version: 3, appliedAt: new Date().toISOString() }, { version: 4, appliedAt: new Date().toISOString() }] };
     for (const project of initialDb.projects) {
       project.templateSnapshot = null;
     }
@@ -180,12 +186,12 @@ export async function loadDb() {
 
   let changed = false;
 
-  const requiredCollections = ["users", "projects", "intakes", "materials"];
+  const requiredCollections = ["users", "projects", "intakes", "materials", "offlineDrafts", "syncQueue"];
   for (const key of requiredCollections) {
     if (!(key in db) || !Array.isArray(db[key])) {
       if (db[key] === undefined || db[key] === null) {
         console.warn(`Initializing empty collection: ${key}`);
-        db[key] = JSON.parse(JSON.stringify(seed[key]));
+        db[key] = JSON.parse(JSON.stringify(seed[key] || []));
         changed = true;
       } else if (!Array.isArray(db[key])) {
         console.warn(`Collection ${key} is not an array, resetting to empty array`);
@@ -230,6 +236,18 @@ export async function loadDb() {
         project.templateSnapshot = null;
         changed = true;
       }
+      if (project.version === undefined) {
+        project.version = 1;
+        changed = true;
+      }
+      if (project.timelineRecords && Array.isArray(project.timelineRecords)) {
+        for (const record of project.timelineRecords) {
+          if (record.version === undefined) {
+            record.version = 1;
+            changed = true;
+          }
+        }
+      }
     }
   }
 
@@ -262,7 +280,7 @@ export async function saveDb(db) {
       const existingData = await readFile(dbPath, "utf8");
       const existingDb = JSON.parse(existingData);
 
-      const protectCollections = ["projects", "templates", "users", "intakes", "materials", "auditLogs"];
+      const protectCollections = ["projects", "templates", "users", "intakes", "materials", "auditLogs", "offlineDrafts", "syncQueue"];
       for (const col of protectCollections) {
         const oldLen = Array.isArray(existingDb[col]) ? existingDb[col].length : 0;
         const newLen = Array.isArray(db[col]) ? db[col].length : 0;

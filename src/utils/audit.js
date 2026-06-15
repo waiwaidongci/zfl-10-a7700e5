@@ -22,7 +22,8 @@ const SOURCES = {
   API: "api",
   SYSTEM: "system",
   REVIEW: "review",
-  ROLLBACK: "rollback"
+  ROLLBACK: "rollback",
+  SYNC: "sync"
 };
 
 function generateAuditId() {

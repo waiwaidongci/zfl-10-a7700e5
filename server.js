@@ -17,6 +17,7 @@ import { handleCalendar } from "./src/routes/calendar.js";
 import { handleReports } from "./src/routes/reports.js";
 import { handleTemplates } from "./src/routes/templates.js";
 import { handleAudit } from "./src/routes/audit.js";
+import { handleSync } from "./src/routes/sync.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "public");
@@ -58,6 +59,10 @@ const server = http.createServer(async (req, res) => {
     const db = await loadDb();
 
     if (pathname.startsWith("/api/")) {
+      if (pathname.startsWith("/api/sync")) {
+        const handled = await handleSync(req, res, db, pathname);
+        if (handled !== false) return;
+      }
       if (pathname.startsWith("/api/users")) {
         const handled = handleUsers(req, res, db);
         if (handled !== false) return;

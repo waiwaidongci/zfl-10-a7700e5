@@ -1,5 +1,7 @@
 import { parseBody, saveDb, sendJson } from "../db.js";
 import { createTimelineRecord, validateTimelineRecord, sortRecords } from "../utils/timeline.js";
+import { incrementVersion } from "../utils/sync.js";
+import { deepClone } from "../utils/diff.js";
 
 export async function handleTimeline(req, res, db, pathname) {
   const listMatch = pathname.match(/^\/api\/projects\/([^/]+)\/timeline$/);
@@ -21,6 +23,20 @@ export async function handleTimeline(req, res, db, pathname) {
     if (!project) return sendJson(res, 404, { error: "project_not_found", message: "项目不存在" });
 
     const input = await parseBody(req);
+
+    if (input.recordId) {
+      const existingRecord = (project.timelineRecords || []).find(r => r.id === input.recordId);
+      if (existingRecord && input.clientVersion !== undefined && input.clientVersion < existingRecord.version) {
+        return sendJson(res, 409, {
+          error: "version_conflict",
+          message: "该记录已被修改，请同步后再操作",
+          clientVersion: input.clientVersion,
+          serverVersion: existingRecord.version,
+          serverRecord: deepClone(existingRecord)
+        });
+      }
+    }
+
     const errors = validateTimelineRecord(input);
     if (errors.length > 0) {
       return sendJson(res, 400, { error: "validation_failed", message: "输入校验失败", errors });
@@ -39,6 +55,7 @@ export async function handleTimeline(req, res, db, pathname) {
 
     if (!project.timelineRecords) project.timelineRecords = [];
     project.timelineRecords.push(record);
+    incrementVersion(project);
     project.updatedAt = new Date().toISOString().slice(0, 10);
 
     await saveDb(db);

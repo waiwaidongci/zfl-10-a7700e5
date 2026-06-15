@@ -13,7 +13,13 @@
       <h1>古籍修复工作室</h1>
       <div class="meta">项目接收、过程记录、负责人工作量</div>
     </div>
-    <select id="viewer"></select>
+    <div class="header-right">
+      <div id="network-status" class="network-status">
+        <span class="status-dot"></span>
+        <span class="status-text">连接中...</span>
+      </div>
+      <select id="viewer"></select>
+    </div>
   </header>
   <nav class="tabs" style="padding: 0 28px;">
     <a href="/" class="active">修复项目</a>
@@ -49,14 +55,21 @@
     </form>
     <section>
       <div class="stats" id="stats"></div>
+      <div id="sync-panel-container"></div>
+      <div id="conflict-modal" class="conflict-modal-overlay" style="display:none;">
+        <div id="conflict-resolver-container"></div>
+      </div>
       <div class="grid" id="projects"></div>
     </section>
   </main>
+  <script src="/js/syncManager.js"></script>
   <script src="/js/components/PhotoLightbox.js"></script>
   <script src="/js/components/PhotosGallery.js"></script>
   <script src="/js/components/PhotosCompare.js"></script>
   <script src="/js/components/ProjectDetail.js"></script>
   <script src="/js/components/TemplateSelector.js"></script>
+  <script src="/js/components/ConflictResolver.js"></script>
+  <script src="/js/components/SyncPanel.js"></script>
   <script src="/js/timeline.js"></script>
   <script src="/js/photos.js"></script>
   <script src="/js/auditLog.js"></script>

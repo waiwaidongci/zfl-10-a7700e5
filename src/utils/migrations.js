@@ -1,7 +1,7 @@
 import { createSnapshot, createTemplateVersionRecord, isSnapshotValid } from "./templateSnapshots.js";
 import { ensureAuditCollection } from "./audit.js";
 
-const CURRENT_SCHEMA_VERSION = 3;
+const CURRENT_SCHEMA_VERSION = 4;
 
 function getDbMeta(db) {
   if (!db._meta) {
@@ -112,9 +112,43 @@ function migration_v2_to_v3(db) {
   return changed;
 }
 
+function migration_v3_to_v4(db) {
+  let changed = false;
+
+  if (!Array.isArray(db.offlineDrafts)) {
+    db.offlineDrafts = [];
+    changed = true;
+  }
+
+  if (!Array.isArray(db.syncQueue)) {
+    db.syncQueue = [];
+    changed = true;
+  }
+
+  if (db.projects && Array.isArray(db.projects)) {
+    for (const project of db.projects) {
+      if (project.version === undefined) {
+        project.version = 1;
+        changed = true;
+      }
+      if (project.timelineRecords && Array.isArray(project.timelineRecords)) {
+        for (const record of project.timelineRecords) {
+          if (record.version === undefined) {
+            record.version = 1;
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  return changed;
+}
+
 const migrations = [
   { from: 1, to: 2, run: migration_v1_to_v2 },
-  { from: 2, to: 3, run: migration_v2_to_v3 }
+  { from: 2, to: 3, run: migration_v2_to_v3 },
+  { from: 3, to: 4, run: migration_v3_to_v4 }
 ];
 
 export function runMigrations(db) {

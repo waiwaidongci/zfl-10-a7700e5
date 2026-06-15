@@ -5,6 +5,7 @@ import { validateProject } from "../utils/validation.js";
 import { getViewer } from "../utils/permissions.js";
 import { recordAudit, ACTION_TYPES, SOURCES } from "../utils/audit.js";
 import { deepClone } from "../utils/diff.js";
+import { incrementVersion } from "../utils/sync.js";
 
 function sanitizeProjectInput(input) {
   const out = {};
@@ -73,6 +74,7 @@ export async function handleProjects(req, res, db, pathname) {
       id: `R-${Date.now()}`,
       status: "进行中",
       updatedAt: new Date().toISOString().slice(0, 10),
+      version: 1,
       reviewRecords: [],
       timelineRecords: [],
       photoArchive: { before: [], during: [], after: [] },
@@ -100,9 +102,21 @@ export async function handleProjects(req, res, db, pathname) {
   if (match && req.method === "PATCH") {
     const project = db.projects.find((item) => item.id === match[1]);
     if (!project) return sendJson(res, 404, { error: "project_not_found" });
+
+    const rawBody = await parseBody(req);
+    const clientVersion = rawBody.clientVersion;
+    if (clientVersion !== undefined && clientVersion < project.version) {
+      return sendJson(res, 409, {
+        error: "version_conflict",
+        message: "服务端版本已更新，请同步后再修改",
+        clientVersion,
+        serverVersion: project.version,
+        serverProject: deepClone(project)
+      });
+    }
+
     const oldStatus = project.status;
     const beforeState = deepClone(project);
-    const rawBody = await parseBody(req);
     const body = sanitizeProjectInput(rawBody);
 
     if (body.templateId) {
@@ -117,6 +131,7 @@ export async function handleProjects(req, res, db, pathname) {
       }
     }
 
+    incrementVersion(project);
     Object.assign(project, body, { updatedAt: new Date().toISOString().slice(0, 10) });
 
     const viewerId = req.headers["x-viewer-id"];

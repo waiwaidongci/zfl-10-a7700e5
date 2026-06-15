@@ -10,7 +10,8 @@ export function createTimelineRecord({ type, operator, operatorId, date, steps, 
     notes: notes || "",
     photoUrl: photoUrl || "",
     systemMessage: systemMessage || "",
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    version: 1
   };
 }
 
