@@ -18,6 +18,48 @@
   ],
   "projects": [
     {
+      "id": "R-1781510238618",
+      "status": "进行中",
+      "updatedAt": "2026-06-15",
+      "version": 1,
+      "reviewRecords": [],
+      "timelineRecords": [],
+      "photoArchive": {
+        "before": [],
+        "during": [],
+        "after": []
+      },
+      "templateSnapshot": null,
+      "title": "直接新建项目测试",
+      "era": "明代",
+      "damage": "虫蛀",
+      "steps": "清洁补纸",
+      "materials": "楮皮纸",
+      "owner": "严澈",
+      "dueDate": "2026-07-15"
+    },
+    {
+      "id": "R-1781510220362",
+      "status": "进行中",
+      "updatedAt": "2026-06-15",
+      "version": 1,
+      "reviewRecords": [],
+      "timelineRecords": [],
+      "photoArchive": {
+        "before": [],
+        "during": [],
+        "after": []
+      },
+      "templateSnapshot": null,
+      "title": "测试从入库创建",
+      "era": "宋代",
+      "damage": "测试破损",
+      "steps": "测试步骤",
+      "materials": "测试材料",
+      "owner": "顾眉",
+      "dueDate": "2026-07-01"
+    },
+    {
       "id": "R-1781488785089",
       "status": "进行中",
       "updatedAt": "2026-06-15",
@@ -299,7 +341,8 @@
       "receiver": "顾眉",
       "receivedAt": "2026-06-14",
       "damage": "封面破损、书脊脱胶、内页黄斑",
-      "tempLocation": "C柜-2层"
+      "tempLocation": "C柜-2层",
+      "projectId": null
     },
     {
       "id": "I-001",
@@ -311,7 +354,8 @@
       "damage": "封面缺失、书页霉斑",
       "tempLocation": "A柜-3层",
       "status": "待修复",
-      "createdAt": "2026-06-10"
+      "createdAt": "2026-06-10",
+      "projectId": null
     },
     {
       "id": "I-002",
@@ -323,7 +367,8 @@
       "damage": "书脊开裂、部分页脱胶",
       "tempLocation": "B柜-1层",
       "status": "待修复",
-      "createdAt": "2026-06-12"
+      "createdAt": "2026-06-12",
+      "projectId": null
     }
   ],
   "materials": [
@@ -492,7 +537,7 @@
     }
   ],
   "_meta": {
-    "schemaVersion": 4,
+    "schemaVersion": 5,
     "migrations": [
       {
         "version": 2,
@@ -507,10 +552,179 @@
         "version": 4,
         "appliedAt": "2026-06-15T05:09:04.463Z",
         "status": "success"
+      },
+      {
+        "version": 5,
+        "appliedAt": "2026-06-15T07:56:53.468Z",
+        "status": "success"
       }
     ]
   },
   "auditLogs": [
+    {
+      "id": "AUD-1781510238618-ql2bei",
+      "projectId": "R-1781510238618",
+      "actionType": "project_create",
+      "actionLabel": "创建项目",
+      "operator": "未知用户",
+      "operatorId": "",
+      "source": "api",
+      "timestamp": "2026-06-15T07:57:18.618Z",
+      "beforeState": null,
+      "afterState": {
+        "title": "直接新建项目测试",
+        "era": "明代",
+        "damage": "虫蛀",
+        "steps": "清洁补纸",
+        "materials": "楮皮纸",
+        "owner": "严澈",
+        "dueDate": "2026-07-15",
+        "status": "进行中"
+      },
+      "changes": [
+        {
+          "field": "title",
+          "label": "藏品名称",
+          "oldValue": null,
+          "newValue": "直接新建项目测试",
+          "type": "add"
+        },
+        {
+          "field": "era",
+          "label": "年代",
+          "oldValue": null,
+          "newValue": "明代",
+          "type": "add"
+        },
+        {
+          "field": "damage",
+          "label": "破损情况",
+          "oldValue": null,
+          "newValue": "虫蛀",
+          "type": "add"
+        },
+        {
+          "field": "steps",
+          "label": "修复步骤",
+          "oldValue": null,
+          "newValue": "清洁补纸",
+          "type": "add"
+        },
+        {
+          "field": "materials",
+          "label": "使用材料",
+          "oldValue": null,
+          "newValue": "楮皮纸",
+          "type": "add"
+        },
+        {
+          "field": "owner",
+          "label": "负责人",
+          "oldValue": null,
+          "newValue": "严澈",
+          "type": "add"
+        },
+        {
+          "field": "dueDate",
+          "label": "预计完成日期",
+          "oldValue": null,
+          "newValue": "2026-07-15",
+          "type": "add"
+        },
+        {
+          "field": "status",
+          "label": "状态",
+          "oldValue": null,
+          "newValue": "进行中",
+          "type": "add"
+        }
+      ],
+      "summary": "8 个字段变更：藏品名称、年代、破损情况、修复步骤、使用材料、负责人、预计完成日期、状态",
+      "note": "",
+      "relatedId": null
+    },
+    {
+      "id": "AUD-1781510220363-8iaakh",
+      "projectId": "R-1781510220362",
+      "actionType": "project_create",
+      "actionLabel": "创建项目",
+      "operator": "未知用户",
+      "operatorId": "",
+      "source": "api",
+      "timestamp": "2026-06-15T07:57:00.363Z",
+      "beforeState": null,
+      "afterState": {
+        "title": "测试从入库创建",
+        "era": "宋代",
+        "damage": "测试破损",
+        "steps": "测试步骤",
+        "materials": "测试材料",
+        "owner": "顾眉",
+        "dueDate": "2026-07-01",
+        "status": "进行中"
+      },
+      "changes": [
+        {
+          "field": "title",
+          "label": "藏品名称",
+          "oldValue": null,
+          "newValue": "测试从入库创建",
+          "type": "add"
+        },
+        {
+          "field": "era",
+          "label": "年代",
+          "oldValue": null,
+          "newValue": "宋代",
+          "type": "add"
+        },
+        {
+          "field": "damage",
+          "label": "破损情况",
+          "oldValue": null,
+          "newValue": "测试破损",
+          "type": "add"
+        },
+        {
+          "field": "steps",
+          "label": "修复步骤",
+          "oldValue": null,
+          "newValue": "测试步骤",
+          "type": "add"
+        },
+        {
+          "field": "materials",
+          "label": "使用材料",
+          "oldValue": null,
+          "newValue": "测试材料",
+          "type": "add"
+        },
+        {
+          "field": "owner",
+          "label": "负责人",
+          "oldValue": null,
+          "newValue": "顾眉",
+          "type": "add"
+        },
+        {
+          "field": "dueDate",
+          "label": "预计完成日期",
+          "oldValue": null,
+          "newValue": "2026-07-01",
+          "type": "add"
+        },
+        {
+          "field": "status",
+          "label": "状态",
+          "oldValue": null,
+          "newValue": "进行中",
+          "type": "add"
+        }
+      ],
+      "summary": "8 个字段变更：藏品名称、年代、破损情况、修复步骤、使用材料、负责人、预计完成日期、状态",
+      "note": "从入库记录 I-001 创建",
+      "relatedId": null
+    },
     {
       "id": "AUD-1781504132132-ub5sdc",
       "projectId": "R-1781488785089",

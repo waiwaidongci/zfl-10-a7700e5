@@ -404,10 +404,14 @@ intakeSelect.onchange = onIntakeChange;
 form.onsubmit = async (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(form).entries());
+  const intakeId = data.intakeId || null;
   delete data.intakeId;
   const templateId = templateSelector ? templateSelector.getValue() : null;
   if (templateId) {
     data.templateId = templateId;
+  }
+  if (intakeId) {
+    data.intakeId = intakeId;
   }
   const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('button');
   const originalText = submitBtn.textContent;

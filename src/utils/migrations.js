@@ -1,7 +1,7 @@
 import { createSnapshot, createTemplateVersionRecord, isSnapshotValid } from "./templateSnapshots.js";
 import { ensureAuditCollection } from "./audit.js";
 
-const CURRENT_SCHEMA_VERSION = 4;
+const CURRENT_SCHEMA_VERSION = 5;
 
 function getDbMeta(db) {
   if (!db._meta) {
@@ -145,10 +145,26 @@ function migration_v3_to_v4(db) {
   return changed;
 }
 
+function migration_v4_to_v5(db) {
+  let changed = false;
+
+  if (db.intakes && Array.isArray(db.intakes)) {
+    for (const intake of db.intakes) {
+      if (intake.projectId === undefined) {
+        intake.projectId = null;
+        changed = true;
+      }
+    }
+  }
+
+  return changed;
+}
+
 const migrations = [
   { from: 1, to: 2, run: migration_v1_to_v2 },
   { from: 2, to: 3, run: migration_v2_to_v3 },
-  { from: 3, to: 4, run: migration_v3_to_v4 }
+  { from: 3, to: 4, run: migration_v3_to_v4 },
+  { from: 4, to: 5, run: migration_v4_to_v5 }
 ];
 
 export function runMigrations(db) {

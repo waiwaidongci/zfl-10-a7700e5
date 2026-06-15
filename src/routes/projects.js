@@ -47,6 +47,7 @@ export async function handleProjects(req, res, db, pathname) {
 
   if (req.method === "POST" && pathname === "/api/projects") {
     const rawInput = await parseBody(req);
+    const intakeId = rawInput.intakeId || null;
     const input = sanitizeProjectInput(rawInput);
 
     let templateSnapshot = null;
@@ -83,6 +84,14 @@ export async function handleProjects(req, res, db, pathname) {
     };
     db.projects.unshift(project);
 
+    if (intakeId) {
+      const intake = db.intakes.find((item) => item.id === intakeId);
+      if (intake) {
+        intake.status = "已立项";
+        intake.projectId = project.id;
+      }
+    }
+
     recordAudit(db, {
       projectId: project.id,
       actionType: ACTION_TYPES.PROJECT_CREATE,
@@ -91,7 +100,7 @@ export async function handleProjects(req, res, db, pathname) {
       source: SOURCES.API,
       beforeState: null,
       afterState: deepClone(project),
-      note: templateSnapshot ? `从模板 ${templateSnapshot.templateName} 创建` : ""
+      note: templateSnapshot ? `从模板 ${templateSnapshot.templateName} 创建` : (intakeId ? `从入库记录 ${intakeId} 创建` : "")
     });
 
     await saveDb(db);
