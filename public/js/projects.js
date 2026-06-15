@@ -190,6 +190,9 @@ function initDetailView(projectId) {
       },
       onOpenTimeline: (project) => {
         if (project && window.Timeline) window.Timeline.open(project, users);
+      },
+      onOpenAudit: (project) => {
+        if (project && window.AuditLog) window.AuditLog.open(project, users);
       }
     });
   } else {
@@ -361,6 +364,14 @@ window.onTimelineUpdated = async (projectId) => {
 };
 
 window.onPhotosUpdated = async (projectId) => {
+  projects = await api("/api/projects");
+  render();
+  if (expandedProjectId === projectId) {
+    initDetailView(expandedProjectId);
+  }
+};
+
+window.onAuditRollback = async (projectId) => {
   projects = await api("/api/projects");
   render();
   if (expandedProjectId === projectId) {

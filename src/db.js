@@ -60,6 +60,8 @@ function validateDbStructure(db) {
   if (!Array.isArray(db.templates)) errors.push("templates 字段缺失或不是数组");
   if (!Array.isArray(db.templateVersions))
     errors.push("templateVersions 字段缺失或不是数组");
+  if (!Array.isArray(db.auditLogs))
+    errors.push("auditLogs 字段缺失或不是数组");
   return errors;
 }
 
@@ -148,10 +150,11 @@ export async function loadDb() {
         createdAt: tpl.createdAt
       });
     }
-    initialDb._meta = { schemaVersion: 2, migrations: [{ version: 2, appliedAt: new Date().toISOString() }] };
+    initialDb._meta = { schemaVersion: 3, migrations: [{ version: 2, appliedAt: new Date().toISOString() }, { version: 3, appliedAt: new Date().toISOString() }] };
     for (const project of initialDb.projects) {
       project.templateSnapshot = null;
     }
+    initialDb.auditLogs = [];
     await writeFile(dbPath, JSON.stringify(initialDb, null, 2));
     return initialDb;
   }
@@ -259,7 +262,7 @@ export async function saveDb(db) {
       const existingData = await readFile(dbPath, "utf8");
       const existingDb = JSON.parse(existingData);
 
-      const protectCollections = ["projects", "templates", "users", "intakes", "materials"];
+      const protectCollections = ["projects", "templates", "users", "intakes", "materials", "auditLogs"];
       for (const col of protectCollections) {
         const oldLen = Array.isArray(existingDb[col]) ? existingDb[col].length : 0;
         const newLen = Array.isArray(db[col]) ? db[col].length : 0;

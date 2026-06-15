@@ -42,6 +42,7 @@
         onOpenPhotos: null,
         onOpenTimeline: null,
         onOpenReview: null,
+        onOpenAudit: null,
         onClose: null
       }, options || {});
 
@@ -163,6 +164,9 @@
       html += '<div class="pd-section-header">';
       html += '<h3 class="pd-section-title">过程时间线</h3>';
       html += '<div class="pd-section-actions">';
+      if (typeof this.options.onOpenAudit === "function") {
+        html += '<button class="pd-link-btn" data-action="audit">📜 操作审计 →</button>';
+      }
       if (typeof this.options.onOpenTimeline === "function") {
         html += '<button class="pd-link-btn" data-action="timeline">查看完整时间线 →</button>';
       }
@@ -277,6 +281,13 @@
       if (tlBtn && typeof this.options.onOpenTimeline === "function") {
         tlBtn.onclick = function() {
           self.options.onOpenTimeline(self.project);
+        };
+      }
+
+      const auditBtn = this.container.querySelector('[data-action="audit"]');
+      if (auditBtn && typeof this.options.onOpenAudit === "function") {
+        auditBtn.onclick = function() {
+          self.options.onOpenAudit(self.project);
         };
       }
     }

@@ -16,6 +16,7 @@ import { handlePhotos } from "./src/routes/photos.js";
 import { handleCalendar } from "./src/routes/calendar.js";
 import { handleReports } from "./src/routes/reports.js";
 import { handleTemplates } from "./src/routes/templates.js";
+import { handleAudit } from "./src/routes/audit.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "public");
@@ -74,6 +75,8 @@ const server = http.createServer(async (req, res) => {
         if (handledTimeline !== false) return;
         const handledPhotos = await handlePhotos(req, res, db, pathname);
         if (handledPhotos !== false) return;
+        const handledAudit = await handleAudit(req, res, db, pathname);
+        if (handledAudit !== false) return;
         const handled = await handleProjects(req, res, db, pathname);
         if (handled !== false) return;
       }

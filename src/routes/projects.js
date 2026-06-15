@@ -3,6 +3,8 @@ import { createSystemRecord } from "../utils/timeline.js";
 import { createSnapshot, applyTemplateToProject } from "../utils/templateSnapshots.js";
 import { validateProject } from "../utils/validation.js";
 import { getViewer } from "../utils/permissions.js";
+import { recordAudit, ACTION_TYPES, SOURCES } from "../utils/audit.js";
+import { deepClone } from "../utils/diff.js";
 
 function sanitizeProjectInput(input) {
   const out = {};
@@ -64,6 +66,9 @@ export async function handleProjects(req, res, db, pathname) {
       return sendJson(res, 400, { error: "validation_failed", errors });
     }
 
+    const viewerId = req.headers["x-viewer-id"];
+    const viewer = getViewer(db, viewerId);
+
     const project = {
       id: `R-${Date.now()}`,
       status: "进行中",
@@ -75,6 +80,18 @@ export async function handleProjects(req, res, db, pathname) {
       ...input
     };
     db.projects.unshift(project);
+
+    recordAudit(db, {
+      projectId: project.id,
+      actionType: ACTION_TYPES.PROJECT_CREATE,
+      operator: viewer ? viewer.name : "未知用户",
+      operatorId: viewerId || "",
+      source: SOURCES.API,
+      beforeState: null,
+      afterState: deepClone(project),
+      note: templateSnapshot ? `从模板 ${templateSnapshot.templateName} 创建` : ""
+    });
+
     await saveDb(db);
     return sendJson(res, 201, project);
   }
@@ -84,6 +101,7 @@ export async function handleProjects(req, res, db, pathname) {
     const project = db.projects.find((item) => item.id === match[1]);
     if (!project) return sendJson(res, 404, { error: "project_not_found" });
     const oldStatus = project.status;
+    const beforeState = deepClone(project);
     const rawBody = await parseBody(req);
     const body = sanitizeProjectInput(rawBody);
 
@@ -101,9 +119,11 @@ export async function handleProjects(req, res, db, pathname) {
 
     Object.assign(project, body, { updatedAt: new Date().toISOString().slice(0, 10) });
 
-    if (body.status && body.status !== oldStatus) {
-      const viewerId = req.headers["x-viewer-id"];
-      const viewer = getViewer(db, viewerId);
+    const viewerId = req.headers["x-viewer-id"];
+    const viewer = getViewer(db, viewerId);
+
+    const statusChanged = body.status && body.status !== oldStatus;
+    if (statusChanged) {
       if (!project.timelineRecords) project.timelineRecords = [];
       project.timelineRecords.push(createSystemRecord({
         operator: viewer ? viewer.name : "未知用户",
@@ -112,6 +132,17 @@ export async function handleProjects(req, res, db, pathname) {
         newStatus: body.status
       }));
     }
+
+    const actionType = statusChanged ? ACTION_TYPES.STATUS_CHANGE : ACTION_TYPES.PROJECT_UPDATE;
+    recordAudit(db, {
+      projectId: project.id,
+      actionType,
+      operator: viewer ? viewer.name : "未知用户",
+      operatorId: viewerId || "",
+      source: SOURCES.API,
+      beforeState,
+      afterState: deepClone(project)
+    });
 
     await saveDb(db);
     return sendJson(res, 200, project);

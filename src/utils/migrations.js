@@ -1,6 +1,7 @@
 import { createSnapshot, createTemplateVersionRecord, isSnapshotValid } from "./templateSnapshots.js";
+import { ensureAuditCollection } from "./audit.js";
 
-const CURRENT_SCHEMA_VERSION = 2;
+const CURRENT_SCHEMA_VERSION = 3;
 
 function getDbMeta(db) {
   if (!db._meta) {
@@ -101,8 +102,19 @@ function ensureTemplateVersionHistory(db) {
   return changed;
 }
 
+function migration_v2_to_v3(db) {
+  let changed = false;
+
+  if (ensureAuditCollection(db)) {
+    changed = true;
+  }
+
+  return changed;
+}
+
 const migrations = [
-  { from: 1, to: 2, run: migration_v1_to_v2 }
+  { from: 1, to: 2, run: migration_v1_to_v2 },
+  { from: 2, to: 3, run: migration_v2_to_v3 }
 ];
 
 export function runMigrations(db) {

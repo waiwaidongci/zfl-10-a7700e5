@@ -19,17 +19,9 @@
   "projects": [
     {
       "id": "R-1781494344255",
-      "status": "已完成",
+      "status": "进行中",
       "updatedAt": "2026-06-15",
-      "reviewRecords": [
-        {
-          "reviewer": "管理员",
-          "reviewerId": "u-admin",
-          "opinion": "修复质量合格，符合验收标准",
-          "result": "通过",
-          "reviewedAt": "2026-06-15"
-        }
-      ],
+      "reviewRecords": [],
       "timelineRecords": [
         {
           "id": "T-1781494413848-6ov65a",
@@ -43,32 +35,6 @@
           "photoUrl": "",
           "systemMessage": "状态变更：进行中 → 待复核",
           "createdAt": "2026-06-15T03:33:33.848Z"
-        },
-        {
-          "id": "T-1781494624733-2ca6st",
-          "type": "system",
-          "operator": "管理员",
-          "operatorId": "u-admin",
-          "date": "2026-06-15",
-          "steps": "状态自动流转",
-          "materials": "",
-          "notes": "",
-          "photoUrl": "",
-          "systemMessage": "状态变更：进行中 → 待复核",
-          "createdAt": "2026-06-15T03:37:04.733Z"
-        },
-        {
-          "id": "T-1781494624750-3j52wv",
-          "type": "system",
-          "operator": "管理员",
-          "operatorId": "u-admin",
-          "date": "2026-06-15",
-          "steps": "状态自动流转",
-          "materials": "",
-          "notes": "",
-          "photoUrl": "",
-          "systemMessage": "状态变更：待复核 → 已完成",
-          "createdAt": "2026-06-15T03:37:04.750Z"
         }
       ],
       "photoArchive": {
@@ -548,90 +514,6 @@
     ]
   },
   "auditLogs": [
-    {
-      "id": "AUD-1781494624750-ruk2rn",
-      "projectId": "R-1781494344255",
-      "actionType": "review_pass",
-      "actionLabel": "复核通过",
-      "operator": "管理员",
-      "operatorId": "u-admin",
-      "source": "review",
-      "timestamp": "2026-06-15T03:37:04.750Z",
-      "beforeState": {
-        "title": "测试审计项目",
-        "era": "清代",
-        "damage": "封面破损",
-        "steps": "清洁、补纸",
-        "materials": "宣纸、淀粉浆",
-        "owner": "顾眉",
-        "dueDate": "2026-07-01",
-        "status": "待复核"
-      },
-      "afterState": {
-        "title": "测试审计项目",
-        "era": "清代",
-        "damage": "封面破损",
-        "steps": "清洁、补纸",
-        "materials": "宣纸、淀粉浆",
-        "owner": "顾眉",
-        "dueDate": "2026-07-01",
-        "status": "已完成"
-      },
-      "changes": [
-        {
-          "field": "status",
-          "label": "状态",
-          "oldValue": "待复核",
-          "newValue": "已完成",
-          "type": "modify"
-        }
-      ],
-      "summary": "状态：待复核 → 已完成",
-      "note": "复核意见：修复质量合格，符合验收标准",
-      "relatedId": null
-    },
-    {
-      "id": "AUD-1781494624734-dhjlqu",
-      "projectId": "R-1781494344255",
-      "actionType": "status_change",
-      "actionLabel": "状态变更",
-      "operator": "管理员",
-      "operatorId": "u-admin",
-      "source": "api",
-      "timestamp": "2026-06-15T03:37:04.734Z",
-      "beforeState": {
-        "title": "测试审计项目",
-        "era": "清代",
-        "damage": "封面破损",
-        "steps": "清洁、补纸",
-        "materials": "宣纸、淀粉浆",
-        "owner": "顾眉",
-        "dueDate": "2026-07-01",
-        "status": "进行中"
-      },
-      "afterState": {
-        "title": "测试审计项目",
-        "era": "清代",
-        "damage": "封面破损",
-        "steps": "清洁、补纸",
-        "materials": "宣纸、淀粉浆",
-        "owner": "顾眉",
-        "dueDate": "2026-07-01",
-        "status": "待复核"
-      },
-      "changes": [
-        {
-          "field": "status",
-          "label": "状态",
-          "oldValue": "进行中",
-          "newValue": "待复核",
-          "type": "modify"
-        }
-      ],
-      "summary": "状态：进行中 → 待复核",
-      "note": "",
-      "relatedId": null
-    },
     {
       "id": "AUD-1781494514005-91tmww",
       "projectId": "R-1781494344255",

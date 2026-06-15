@@ -1,5 +1,7 @@
 import { parseBody, saveDb, sendJson } from "../db.js";
 import { createSystemRecord } from "../utils/timeline.js";
+import { recordAudit, ACTION_TYPES, SOURCES } from "../utils/audit.js";
+import { deepClone } from "../utils/diff.js";
 
 export async function handleReviews(req, res, db, pathname) {
   const isPendingReview = req.method === "GET" && pathname === "/api/projects/pending-review";
@@ -39,6 +41,8 @@ export async function handleReviews(req, res, db, pathname) {
       return sendJson(res, 400, { error: "invalid_opinion", message: "请填写复核意见" });
     }
 
+    const beforeState = deepClone(project);
+
     const reviewRecord = {
       reviewer: viewer.name,
       reviewerId: viewer.id,
@@ -61,6 +65,18 @@ export async function handleReviews(req, res, db, pathname) {
       oldStatus,
       newStatus
     }));
+
+    const actionType = result === "通过" ? ACTION_TYPES.REVIEW_PASS : ACTION_TYPES.REVIEW_REJECT;
+    recordAudit(db, {
+      projectId: project.id,
+      actionType,
+      operator: viewer.name,
+      operatorId: viewer.id,
+      source: SOURCES.REVIEW,
+      beforeState,
+      afterState: deepClone(project),
+      note: `复核意见：${opinion.trim()}`
+    });
 
     await saveDb(db);
     return sendJson(res, 200, { project, reviewRecord });
