@@ -123,6 +123,24 @@
       html += '</div>';
       html += '</div>';
 
+      var lastRejection = null;
+      for (var ri = reviewRecords.length - 1; ri >= 0; ri--) {
+        if (reviewRecords[ri].result === "退回") {
+          lastRejection = reviewRecords[ri];
+          break;
+        }
+      }
+      if (lastRejection) {
+        html += '<div class="pd-rejection-banner">' +
+          '<div class="pd-rejection-icon">⚠️</div>' +
+          '<div class="pd-rejection-body">' +
+            '<div class="pd-rejection-title">最近退回原因</div>' +
+            '<div class="pd-rejection-meta">' + escapeHtml(lastRejection.reviewer) + ' · ' + escapeHtml(lastRejection.reviewedAt) + '</div>' +
+            '<div class="pd-rejection-opinion">' + escapeHtml(lastRejection.opinion) + '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
       html += '<div class="pd-info-grid">';
       html += this._buildInfoCard("破损情况", p.damage, "🔬");
       html += this._buildInfoCard("修复步骤", p.steps, "📝");

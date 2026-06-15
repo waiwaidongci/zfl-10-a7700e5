@@ -1,7 +1,83 @@
 import { parseBody, saveDb, sendJson } from "../db.js";
-import { createSystemRecord } from "../utils/timeline.js";
+import { createSystemRecord, sortRecords } from "../utils/timeline.js";
 import { recordAudit, ACTION_TYPES, SOURCES } from "../utils/audit.js";
 import { deepClone } from "../utils/diff.js";
+
+function sanitizeArchive(archive) {
+  const result = { before: [], during: [], after: [] };
+  ["before", "during", "after"].forEach(function(stage) {
+    const arr = (archive && archive[stage]) || [];
+    result[stage] = arr.filter(function(url) {
+      return typeof url === "string" && url.trim() !== "";
+    });
+  });
+  return result;
+}
+
+function enrichProject(p, db) {
+  const archive = sanitizeArchive(p.photoArchive);
+  const photoCount = archive.before.length + archive.during.length + archive.after.length;
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = new Date(p.dueDate) < new Date(today);
+
+  let reviewRequirements = "";
+  if (p.templateSnapshot && p.templateSnapshot.reviewNotes) {
+    reviewRequirements = p.templateSnapshot.reviewNotes;
+  } else if (p.templateSnapshot && p.templateSnapshot.templateId) {
+    const tpl = db.templates.find(function(t) { return t.id === p.templateSnapshot.templateId; });
+    if (tpl && tpl.reviewNotes) reviewRequirements = tpl.reviewNotes;
+  }
+
+  let latestProcessSummary = null;
+  if (p.timelineRecords && p.timelineRecords.length > 0) {
+    const sorted = sortRecords(p.timelineRecords);
+    const latestManual = sorted.find(function(r) { return r.type === "manual"; });
+    if (latestManual) {
+      latestProcessSummary = {
+        date: latestManual.date,
+        operator: latestManual.operator,
+        steps: latestManual.steps,
+        notes: latestManual.notes || ""
+      };
+    }
+  }
+
+  let lastRejection = null;
+  if (p.reviewRecords && p.reviewRecords.length > 0) {
+    for (let i = p.reviewRecords.length - 1; i >= 0; i--) {
+      if (p.reviewRecords[i].result === "退回") {
+        lastRejection = {
+          reviewer: p.reviewRecords[i].reviewer,
+          opinion: p.reviewRecords[i].opinion,
+          reviewedAt: p.reviewRecords[i].reviewedAt
+        };
+        break;
+      }
+    }
+  }
+
+  return {
+    id: p.id,
+    title: p.title,
+    era: p.era,
+    owner: p.owner,
+    dueDate: p.dueDate,
+    damage: p.damage,
+    steps: p.steps,
+    materials: p.materials,
+    status: p.status,
+    updatedAt: p.updatedAt,
+    reviewRecords: p.reviewRecords || [],
+    templateSnapshot: p.templateSnapshot,
+    photoArchive: p.photoArchive,
+    timelineRecords: p.timelineRecords || [],
+    reviewRequirements: reviewRequirements,
+    latestProcessSummary: latestProcessSummary,
+    photoCount: photoCount,
+    overdue: overdue,
+    lastRejection: lastRejection
+  };
+}
 
 export async function handleReviews(req, res, db, pathname) {
   const isPendingReview = req.method === "GET" && pathname === "/api/projects/pending-review";
@@ -21,7 +97,8 @@ export async function handleReviews(req, res, db, pathname) {
 
   if (isPendingReview) {
     const pending = db.projects.filter((p) => p.status === "待复核");
-    return sendJson(res, 200, pending);
+    const enriched = pending.map((p) => enrichProject(p, db));
+    return sendJson(res, 200, enriched);
   }
 
   if (reviewMatch && req.method === "POST") {

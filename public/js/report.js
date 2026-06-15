@@ -131,6 +131,48 @@
     wrap.innerHTML = html;
   }
 
+  function buildTemplateInfo(template, reviewRequirements) {
+    const section = document.getElementById("templateSection");
+    if (!section) return;
+
+    if (!template && !reviewRequirements) {
+      section.style.display = "none";
+      return;
+    }
+
+    section.style.display = "block";
+    const wrap = document.getElementById("templateWrap");
+    if (!wrap) return;
+
+    let html = '';
+
+    if (template) {
+      html += '<div class="report-template-info">';
+      html += '<div class="report-template-name">' + escapeHtml(template.templateName || '未知模板') + '</div>';
+      html += '<div class="report-template-meta">';
+      if (template.templateCategory) {
+        html += '<span>类型：' + escapeHtml(template.templateCategory) + '</span>';
+      }
+      if (template.templateVersion) {
+        html += '<span>版本：v' + template.templateVersion + '</span>';
+      }
+      if (template.estimatedDays) {
+        html += '<span>预计工期：' + template.estimatedDays + '天</span>';
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+
+    if (reviewRequirements) {
+      html += '<div class="report-review-requirements">' +
+        '<div class="report-requirements-title">📋 模板复核要求</div>' +
+        '<div class="report-requirements-content">' + escapeHtml(reviewRequirements) + '</div>' +
+      '</div>';
+    }
+
+    wrap.innerHTML = html;
+  }
+
   function buildReviews(reviews) {
     const section = document.getElementById("reviewSection");
     const wrap = document.getElementById("reviewWrap");
@@ -142,7 +184,20 @@
 
     section.style.display = "block";
 
-    let html = '<div class="report-review-list">';
+    let html = '';
+
+    if (reviews.lastRejection) {
+      html += '<div class="report-rejection-notice">' +
+        '<div class="report-rejection-icon">⚠️</div>' +
+        '<div class="report-rejection-body">' +
+          '<div class="report-rejection-title">最近一次退回原因</div>' +
+          '<div class="report-rejection-meta">复核人：' + escapeHtml(reviews.lastRejection.reviewer) + ' · ' + escapeHtml(reviews.lastRejection.reviewedAt) + '</div>' +
+          '<div class="report-rejection-opinion">' + escapeHtml(reviews.lastRejection.opinion) + '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    html += '<div class="report-review-list">';
     reviews.records.forEach(function(record, index) {
       const isPass = record.result === "通过";
       html +=
@@ -176,6 +231,7 @@
     document.getElementById("restorationSteps").textContent = data.restoration.steps;
     document.getElementById("restorationMaterials").textContent = data.restoration.materials;
 
+    buildTemplateInfo(data.template, data.reviewRequirements);
     buildProcessRecords(data.process);
     buildPhotos(data.photos);
     buildReviews(data.reviews);

@@ -13,7 +13,7 @@ function sanitizeArchive(archive) {
   return result;
 }
 
-function buildReportData(project) {
+function buildReportData(project, db) {
   const archive = sanitizeArchive(project.photoArchive);
   const photoCount = archive.before.length + archive.during.length + archive.after.length;
   const timelineRecords = sortRecords(project.timelineRecords || []);
@@ -30,6 +30,46 @@ function buildReportData(project) {
   }
   if (!completionDate && project.status === "已完成") {
     completionDate = project.updatedAt;
+  }
+
+  let lastRejection = null;
+  for (let i = reviewRecords.length - 1; i >= 0; i--) {
+    if (reviewRecords[i].result === "退回") {
+      lastRejection = {
+        reviewer: reviewRecords[i].reviewer,
+        opinion: reviewRecords[i].opinion,
+        reviewedAt: reviewRecords[i].reviewedAt
+      };
+      break;
+    }
+  }
+
+  let templateInfo = null;
+  let reviewRequirements = "";
+  if (project.templateSnapshot) {
+    templateInfo = {
+      templateId: project.templateSnapshot.templateId,
+      templateName: project.templateSnapshot.templateName,
+      templateCategory: project.templateSnapshot.templateCategory,
+      templateVersion: project.templateSnapshot.templateVersion,
+      estimatedDays: project.templateSnapshot.estimatedDays,
+      reviewRequired: project.templateSnapshot.reviewRequired,
+      appliedAt: project.templateSnapshot.appliedAt
+    };
+    reviewRequirements = project.templateSnapshot.reviewNotes || "";
+  } else if (project.templateId && db) {
+    const tpl = db.templates && db.templates.find(function(t) { return t.id === project.templateId; });
+    if (tpl) {
+      templateInfo = {
+        templateId: tpl.id,
+        templateName: tpl.name,
+        templateCategory: tpl.category,
+        templateVersion: tpl.version || 1,
+        estimatedDays: tpl.estimatedDays,
+        reviewRequired: tpl.reviewRequired
+      };
+      reviewRequirements = tpl.reviewNotes || "";
+    }
   }
 
   return {
@@ -52,6 +92,8 @@ function buildReportData(project) {
       steps: project.steps,
       materials: project.materials
     },
+    template: templateInfo,
+    reviewRequirements: reviewRequirements,
     process: {
       records: manualRecords,
       hasRecords: manualRecords.length > 0,
@@ -69,7 +111,8 @@ function buildReportData(project) {
       records: reviewRecords,
       hasReviews: reviewRecords.length > 0,
       totalReviews: reviewRecords.length,
-      lastReview: reviewRecords.length > 0 ? reviewRecords[reviewRecords.length - 1] : null
+      lastReview: reviewRecords.length > 0 ? reviewRecords[reviewRecords.length - 1] : null,
+      lastRejection: lastRejection
     },
     generatedAt: new Date().toISOString()
   };
@@ -99,7 +142,7 @@ export async function handleReports(req, res, db, pathname) {
       return sendJson(res, 400, { error: "project_not_completed", message: "仅已完成项目可生成修复报告" });
     }
 
-    const report = buildReportData(project);
+    const report = buildReportData(project, db);
     return sendJson(res, 200, report);
   }
 

@@ -328,6 +328,217 @@
       ],
       "templateSnapshot": null,
       "version": 1
+    },
+    {
+      "id": "R-TEST-001",
+      "title": "宋代佛经残卷（测试）",
+      "era": "宋代",
+      "damage": "虫蛀严重、部分字迹模糊、边缘破损",
+      "steps": "1. 检查残卷数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
+      "materials": "楮皮纸、小麦淀粉浆、脱酸剂",
+      "owner": "顾眉",
+      "dueDate": "2026-06-10",
+      "status": "待复核",
+      "updatedAt": "2026-06-14",
+      "reviewRecords": [
+        {
+          "reviewer": "管理员",
+          "reviewerId": "u-admin",
+          "result": "退回",
+          "opinion": "补纸边缘贴合度不够，部分区域有明显缝隙。建议重新检查所有补缀处，确保补纸与原纸完全粘合。另外，页面清洁不彻底，仍有霉斑残留。",
+          "reviewedAt": "2026-06-12"
+        },
+        {
+          "reviewer": "管理员",
+          "reviewerId": "u-admin",
+          "result": "退回",
+          "opinion": "虽然补缀质量有所提升，但仍有3处虫蛀区域修复不到位。同时，建议增加脱酸处理步骤，以延长纸张保存寿命。请重新整改后再次提交复核。",
+          "reviewedAt": "2026-06-14"
+        }
+      ],
+      "timelineRecords": [
+        {
+          "id": "T-TEST-001",
+          "type": "manual",
+          "operator": "顾眉",
+          "operatorId": "u-mei",
+          "date": "2026-06-08",
+          "steps": "检查残卷数量及破损情况，拍照存档，记录共15页残片",
+          "materials": "",
+          "notes": "虫蛀面积约30%，主要集中在页面边缘",
+          "photoUrl": "",
+          "createdAt": "2026-06-08T09:00:00.000Z",
+          "version": 1
+        },
+        {
+          "id": "T-TEST-002",
+          "type": "manual",
+          "operator": "顾眉",
+          "operatorId": "u-mei",
+          "date": "2026-06-09",
+          "steps": "使用软毛刷清理表面灰尘，用低浓度乙醇轻擦霉斑",
+          "materials": "低浓度乙醇、软毛刷、无尘布",
+          "notes": "清理时注意力度，避免纸张二次损伤",
+          "photoUrl": "",
+          "createdAt": "2026-06-09T10:30:00.000Z",
+          "version": 1
+        },
+        {
+          "id": "T-TEST-003",
+          "type": "manual",
+          "operator": "顾眉",
+          "operatorId": "u-mei",
+          "date": "2026-06-11",
+          "steps": "对虫蛀、缺口处使用楮皮纸进行补缀，使用小麦淀粉浆粘合",
+          "materials": "楮皮纸、小麦淀粉浆",
+          "notes": "已整改第一次退回提出的问题，补纸贴合度已提升",
+          "photoUrl": "",
+          "createdAt": "2026-06-11T14:00:00.000Z",
+          "version": 1
+        },
+        {
+          "id": "T-TEST-004",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-14",
+          "steps": "状态自动流转",
+          "materials": "",
+          "notes": "",
+          "systemMessage": "状态变更：进行中 → 待复核",
+          "createdAt": "2026-06-14T16:30:00.000Z",
+          "version": 1
+        }
+      ],
+      "photoArchive": {
+        "before": [
+          "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8",
+          "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c"
+        ],
+        "during": [
+          "https://images.unsplash.com/photo-1519682337058-a94d519337bc"
+        ],
+        "after": [
+          "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+          "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
+        ]
+      },
+      "templateSnapshot": {
+        "templateId": "TPL-001",
+        "templateName": "古籍散页修复流程",
+        "templateCategory": "古籍散页",
+        "templateVersion": 1,
+        "steps": "1. 检查散页数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
+        "materials": "楮皮纸、小麦淀粉浆",
+        "estimatedDays": 7,
+        "reviewRequired": true,
+        "reviewNotes": "需检验补纸边缘贴合度、页面平整度及清洁度。补纸纹理需与原纸保持一致，粘合处不能有明显缝隙。",
+        "appliedAt": "2026-06-07"
+      },
+      "version": 3
+    },
+    {
+      "id": "R-TEST-002",
+      "title": "清代线装诗集（测试报告）",
+      "era": "清代",
+      "damage": "书脊断裂、封面磨损、部分页面脱胶",
+      "steps": "1. 拆解书册，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+      "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+      "owner": "严澈",
+      "dueDate": "2026-05-20",
+      "status": "已完成",
+      "updatedAt": "2026-06-10",
+      "reviewRecords": [
+        {
+          "reviewer": "管理员",
+          "reviewerId": "u-admin",
+          "result": "退回",
+          "opinion": "书脊装订不牢固，棉线松弛。封面托裱有气泡，需要返工。请重新装订并检查封面质量。",
+          "reviewedAt": "2026-05-25"
+        },
+        {
+          "reviewer": "管理员",
+          "reviewerId": "u-admin",
+          "result": "退回",
+          "opinion": "书脊装订质量有所提升，但仍存在以下问题：1. 部分页面补缀处粘合不牢；2. 封面颜色与原书略有差异；3. 缺少修复过程照片归档。请补充完善后再次提交。",
+          "reviewedAt": "2026-06-02"
+        },
+        {
+          "reviewer": "管理员",
+          "reviewerId": "u-admin",
+          "result": "通过",
+          "opinion": "修复工艺规范，书脊牢固，封面平整，补缀处粘合良好。照片档案齐全，符合修复标准。同意通过复核，予以归档。",
+          "reviewedAt": "2026-06-10"
+        }
+      ],
+      "timelineRecords": [
+        {
+          "id": "T-TEST-011",
+          "type": "manual",
+          "operator": "严澈",
+          "operatorId": "u-yan",
+          "date": "2026-05-15",
+          "steps": "拆解书册，逐页检查破损情况，记录问题点",
+          "materials": "",
+          "notes": "共发现8页脱胶，书脊完全断裂",
+          "photoUrl": "",
+          "createdAt": "2026-05-15T09:00:00.000Z",
+          "version": 1
+        },
+        {
+          "id": "T-TEST-012",
+          "type": "manual",
+          "operator": "严澈",
+          "operatorId": "u-yan",
+          "date": "2026-05-18",
+          "steps": "清理页面灰尘，对脱胶页面进行补缀",
+          "materials": "楮皮纸、小麦淀粉浆",
+          "notes": "补缀时注意保持纸张纹理一致",
+          "photoUrl": "",
+          "createdAt": "2026-05-18T10:30:00.000Z",
+          "version": 1
+        },
+        {
+          "id": "T-TEST-013",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-10",
+          "steps": "状态自动流转",
+          "materials": "",
+          "notes": "",
+          "systemMessage": "状态变更：待复核 → 已完成",
+          "createdAt": "2026-06-10T16:00:00.000Z",
+          "version": 1
+        }
+      ],
+      "photoArchive": {
+        "before": [
+          "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+          "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
+        ],
+        "during": [
+          "https://images.unsplash.com/photo-1466442929976-97f336a657be"
+        ],
+        "after": [
+          "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c",
+          "https://images.unsplash.com/photo-1519682337058-a94d519337bc",
+          "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8"
+        ]
+      },
+      "templateSnapshot": {
+        "templateId": "TPL-002",
+        "templateName": "线装书修复流程",
+        "templateCategory": "线装书",
+        "templateVersion": 1,
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "estimatedDays": 10,
+        "reviewRequired": true,
+        "reviewNotes": "需检验装订牢固度、封面托裱质量及整体平整度。书脊装订需采用四眼线装法，封面托裱需无气泡无褶皱。",
+        "appliedAt": "2026-05-10"
+      },
+      "version": 5
     }
   ],
   "intakes": [

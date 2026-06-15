@@ -32,18 +32,10 @@ async function api(path, options) {
   return res.json();
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return d.toISOString().slice(0, 10);
-}
-
-function isOverdue(project) {
-  return new Date(project.dueDate) < new Date(new Date().toISOString().slice(0, 10));
-}
-
 function renderStats() {
-  const overdue = pendingProjects.filter(isOverdue).length;
+  const overdueCount = pendingProjects.filter((p) => p.overdue).length;
+  const rejectedCount = pendingProjects.filter((p) => p.lastRejection).length;
+  const totalPhotos = pendingProjects.reduce((sum, p) => sum + (p.photoCount || 0), 0);
   const workload = pendingProjects.reduce((map, item) => {
     map[item.owner] = (map[item.owner] || 0) + 1;
     return map;
@@ -51,7 +43,9 @@ function renderStats() {
 
   reviewStats.innerHTML =
     '<div class="stat"><span>待复核</span><strong>' + pendingProjects.length + '</strong></div>' +
-    '<div class="stat"><span>已逾期</span><strong>' + overdue + '</strong></div>' +
+    '<div class="stat"><span>已逾期</span><strong>' + overdueCount + '</strong></div>' +
+    '<div class="stat"><span>曾退回</span><strong>' + rejectedCount + '</strong></div>' +
+    '<div class="stat"><span>照片总计</span><strong>' + totalPhotos + '</strong></div>' +
     '<div class="stat"><span>负责人分布</span><strong>' +
     (Object.keys(workload).length > 0
       ? Object.entries(workload).map(([k, v]) => k + v).join(" / ")
@@ -76,6 +70,71 @@ function renderHistory(records) {
     '</div>';
 }
 
+function renderEnrichment(p) {
+  let html = '<div class="review-enrichment">';
+
+  if (p.reviewRequirements) {
+    html += '<div class="enrichment-item requirement">' +
+      '<div class="enrichment-label"><span class="enrich-icon">📋</span>模板复核要求</div>' +
+      '<div class="enrichment-value">' + escapeHtml(p.reviewRequirements) + '</div>' +
+    '</div>';
+  } else {
+    html += '<div class="enrichment-item requirement muted">' +
+      '<div class="enrichment-label"><span class="enrich-icon">📋</span>模板复核要求</div>' +
+      '<div class="enrichment-value">无特定模板复核要求</div>' +
+    '</div>';
+  }
+
+  if (p.latestProcessSummary) {
+    const s = p.latestProcessSummary;
+    html += '<div class="enrichment-item process">' +
+      '<div class="enrichment-label"><span class="enrich-icon">📝</span>最近过程记录</div>' +
+      '<div class="enrichment-value">' +
+        '<div class="process-meta">' + escapeHtml(s.operator) + ' · ' + escapeHtml(s.date) + '</div>' +
+        '<div class="process-steps">' + escapeHtml(s.steps) + '</div>' +
+        (s.notes ? '<div class="process-notes">备注：' + escapeHtml(s.notes) + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  } else {
+    html += '<div class="enrichment-item process muted">' +
+      '<div class="enrichment-label"><span class="enrich-icon">📝</span>最近过程记录</div>' +
+      '<div class="enrichment-value">暂无过程记录</div>' +
+    '</div>';
+  }
+
+  html += '<div class="enrichment-item photos">' +
+    '<div class="enrichment-label"><span class="enrich-icon">📷</span>照片档案</div>' +
+    '<div class="enrichment-value">' +
+      '<span class="photo-count-badge">' + (p.photoCount || 0) + '</span> 张照片' +
+    '</div>' +
+  '</div>';
+
+  if (p.overdue) {
+    html += '<div class="enrichment-item overdue">' +
+      '<div class="enrichment-label"><span class="enrich-icon">⚠️</span>项目状态</div>' +
+      '<div class="enrichment-value"><span class="overdue-tag">已逾期</span></div>' +
+    '</div>';
+  } else {
+    html += '<div class="enrichment-item on-schedule">' +
+      '<div class="enrichment-label"><span class="enrich-icon">✅</span>项目状态</div>' +
+      '<div class="enrichment-value"><span class="on-schedule-tag">按期进行中</span></div>' +
+    '</div>';
+  }
+
+  if (p.lastRejection) {
+    html += '<div class="enrichment-item rejection">' +
+      '<div class="enrichment-label"><span class="enrich-icon">🔄</span>最近退回原因</div>' +
+      '<div class="enrichment-value">' +
+        '<div class="rejection-meta">' + escapeHtml(p.lastRejection.reviewer) + ' · ' + escapeHtml(p.lastRejection.reviewedAt) + '</div>' +
+        '<div class="rejection-opinion">' + escapeHtml(p.lastRejection.opinion) + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
 function render() {
   if (!currentUser || currentUser.role !== "admin") {
     noPermission.style.display = "block";
@@ -93,15 +152,19 @@ function render() {
   } else {
     emptyState.style.display = "none";
     reviewList.innerHTML = pendingProjects.map((p) => {
-      const cls = isOverdue(p) ? 'overdue' : '';
+      const cls = p.overdue ? 'overdue' : '';
       return (
         '<article class="' + cls + '">' +
-          '<div class="row"><h3>' + escapeHtml(p.title) + '</h3><span class="pill pending">待复核</span></div>' +
+          '<div class="row"><h3>' + escapeHtml(p.title) + '</h3>' +
+            '<span class="pill pending">待复核</span>' +
+            (p.overdue ? '<span class="pill overdue-pill">逾期</span>' : '') +
+            (p.lastRejection ? '<span class="pill reject-pill">曾退回</span>' : '') +
+          '</div>' +
           '<div class="meta">' + escapeHtml(p.era) + ' · ' + escapeHtml(p.owner) + ' · 预计 ' + escapeHtml(p.dueDate) + '</div>' +
           '<div><b>破损</b> ' + escapeHtml(p.damage) + '</div>' +
           '<div><b>步骤</b> ' + escapeHtml(p.steps) + '</div>' +
           '<div><b>材料</b> ' + escapeHtml(p.materials) + '</div>' +
-          (isOverdue(p) ? '<div class="danger">已超过预计完成日期</div>' : '') +
+          renderEnrichment(p) +
           renderHistory(p.reviewRecords) +
           '<div class="actions">' +
             '<button class="secondary" data-action="review" data-id="' + escapeHtml(p.id) + '">开始复核</button>' +
@@ -123,22 +186,69 @@ function render() {
   renderStats();
 }
 
+function buildProjectDetailHtml(p) {
+  let html = '<div class="project-detail">';
+
+  if (p.lastRejection) {
+    html += '<div class="modal-rejection-banner">' +
+      '<div class="modal-rejection-icon">⚠️</div>' +
+      '<div class="modal-rejection-content">' +
+        '<div class="modal-rejection-title">最近退回原因</div>' +
+        '<div class="modal-rejection-meta">' + escapeHtml(p.lastRejection.reviewer) + ' · ' + escapeHtml(p.lastRejection.reviewedAt) + '</div>' +
+        '<div class="modal-rejection-opinion">' + escapeHtml(p.lastRejection.opinion) + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  html += '<div class="detail-row"><span class="detail-label">编号</span><span>' + escapeHtml(p.id) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">年代</span><span>' + escapeHtml(p.era) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">负责人</span><span>' + escapeHtml(p.owner) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">预计完成</span><span>' + escapeHtml(p.dueDate) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">破损情况</span><span>' + escapeHtml(p.damage) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">修复步骤</span><span>' + escapeHtml(p.steps) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">使用材料</span><span>' + escapeHtml(p.materials) + '</span></div>';
+
+  if (p.reviewRequirements) {
+    html += '<div class="detail-row detail-highlight detail-requirement">' +
+      '<span class="detail-label">📋 复核要求</span>' +
+      '<span>' + escapeHtml(p.reviewRequirements) + '</span>' +
+    '</div>';
+  }
+
+  html += '<div class="detail-row"><span class="detail-label">📷 照片数量</span><span><strong>' + (p.photoCount || 0) + '</strong> 张</span></div>';
+
+  if (p.overdue) {
+    html += '<div class="detail-row detail-overdue"><span class="detail-label">⚠️ 项目状态</span><span class="danger"><strong>已逾期</strong></span></div>';
+  } else {
+    html += '<div class="detail-row detail-on-schedule"><span class="detail-label">✅ 项目状态</span><span class="success">按期进行中</span></div>';
+  }
+
+  html += '</div>';
+
+  if (p.latestProcessSummary) {
+    const s = p.latestProcessSummary;
+    html += '<div class="detail-process-summary">' +
+      '<div class="detail-process-title">📝 最近过程记录</div>' +
+      '<div class="detail-process-meta">' + escapeHtml(s.operator) + ' · ' + escapeHtml(s.date) + '</div>' +
+      '<div class="detail-process-steps">' + escapeHtml(s.steps) + '</div>' +
+      (s.notes ? '<div class="detail-process-notes">备注：' + escapeHtml(s.notes) + '</div>' : '') +
+    '</div>';
+  } else {
+    html += '<div class="detail-process-summary muted">' +
+      '<div class="detail-process-title">📝 最近过程记录</div>' +
+      '<div class="detail-process-steps">暂无过程记录</div>' +
+    '</div>';
+  }
+
+  return html;
+}
+
 function openReviewModal(projectId) {
   selectedProject = pendingProjects.find((p) => p.id === projectId);
   if (!selectedProject) return;
 
   modalTitle.textContent = "项目复核 - " + selectedProject.title;
-  projectInfo.innerHTML =
-    '<div class="project-detail">' +
-      '<div class="detail-row"><span class="detail-label">编号</span><span>' + escapeHtml(selectedProject.id) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">年代</span><span>' + escapeHtml(selectedProject.era) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">负责人</span><span>' + escapeHtml(selectedProject.owner) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">预计完成</span><span>' + escapeHtml(selectedProject.dueDate) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">破损情况</span><span>' + escapeHtml(selectedProject.damage) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">修复步骤</span><span>' + escapeHtml(selectedProject.steps) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">使用材料</span><span>' + escapeHtml(selectedProject.materials) + '</span></div>' +
-    '</div>' +
-    renderHistory(selectedProject.reviewRecords);
+  projectInfo.innerHTML = buildProjectDetailHtml(selectedProject) + renderHistory(selectedProject.reviewRecords);
 
   reviewOpinion.value = "";
   reviewModal.style.display = "flex";
@@ -150,17 +260,7 @@ function openDetailModal(projectId) {
   if (!project) return;
 
   modalTitle.textContent = "项目详情 - " + project.title;
-  projectInfo.innerHTML =
-    '<div class="project-detail">' +
-      '<div class="detail-row"><span class="detail-label">编号</span><span>' + escapeHtml(project.id) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">年代</span><span>' + escapeHtml(project.era) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">负责人</span><span>' + escapeHtml(project.owner) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">预计完成</span><span>' + escapeHtml(project.dueDate) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">破损情况</span><span>' + escapeHtml(project.damage) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">修复步骤</span><span>' + escapeHtml(project.steps) + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">使用材料</span><span>' + escapeHtml(project.materials) + '</span></div>' +
-    '</div>' +
-    renderHistory(project.reviewRecords);
+  projectInfo.innerHTML = buildProjectDetailHtml(project) + renderHistory(project.reviewRecords);
 
   reviewOpinion.style.display = "none";
   approveBtn.style.display = "none";
