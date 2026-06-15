@@ -11,7 +11,16 @@ window.AuditLog = {
 
   async open(project, users) {
     auditProjectId = project.id;
-    auditUser = auditUser || (users && users[0]);
+    if (users && users.length > 0) {
+      const viewerEl = document.querySelector('#viewer');
+      const viewerId = viewerEl ? viewerEl.value : '';
+      const found = users.find(u => u.id === viewerId);
+      if (found) {
+        auditUser = found;
+      } else if (!auditUser) {
+        auditUser = users[0];
+      }
+    }
     auditSelectedLogId = null;
     auditRollbackPreview = null;
     try {
