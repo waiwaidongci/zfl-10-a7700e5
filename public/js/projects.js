@@ -475,13 +475,6 @@ function updateStockHint(selectedMaterials) {
 
 async function load() {
   users = await api("/api/users");
-  projects = await api("/api/projects");
-  if (window.SyncManager) {
-    projects = window.SyncManager.mergeProjectsWithDrafts(projects);
-  }
-  intakes = await api("/api/intakes");
-  materials = await api("/api/materials");
-  templates = await api("/api/templates");
 
   viewer.innerHTML = users.map((u) => '<option value="' + u.id + '">' + escapeHtml(u.name) + ' · ' + escapeHtml(u.role) + '</option>').join("");
   const savedViewerId = localStorage.getItem("viewerId");
@@ -494,6 +487,14 @@ async function load() {
 
   if (window.Timeline) window.Timeline.setUser(users.find(u => u.id === viewer.value) || users[0]);
 
+  projects = await api("/api/projects");
+  if (window.SyncManager) {
+    projects = window.SyncManager.mergeProjectsWithDrafts(projects);
+  }
+  intakes = await api("/api/intakes");
+  materials = await api("/api/materials");
+  templates = await api("/api/templates");
+
   renderIntakeOptions();
   renderMaterialCheckboxes();
   if (!templateSelector) {
@@ -501,6 +502,7 @@ async function load() {
   } else {
     templateSelector.setTemplates(templates);
   }
+  filtersLoadedFromUrl = false;
   render();
 }
 
@@ -528,9 +530,13 @@ window.onAuditRollback = async (projectId) => {
   }
 };
 
-viewer.onchange = () => {
+viewer.onchange = async () => {
   localStorage.setItem("viewerId", viewer.value);
   if (window.Timeline) window.Timeline.setUser(users.find(u => u.id === viewer.value) || users[0]);
+  projects = await api("/api/projects");
+  if (window.SyncManager) {
+    projects = window.SyncManager.mergeProjectsWithDrafts(projects);
+  }
   filtersLoadedFromUrl = false;
   render();
 };
