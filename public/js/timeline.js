@@ -2,6 +2,17 @@ let currentProjectId = null;
 let currentRecords = [];
 let currentUser = null;
 
+function api(path, options) {
+  if (window.SyncManager) {
+    return window.SyncManager.api(path, options);
+  }
+  const viewerEl = document.querySelector('#viewer');
+  const viewerId = viewerEl ? viewerEl.value : '';
+  const headers = { "Content-Type": "application/json" };
+  if (viewerId) headers["X-Viewer-Id"] = viewerId;
+  return fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers })).then(r => r.json());
+}
+
 window.Timeline = {
   setUser(user) {
     currentUser = user;
@@ -11,11 +22,29 @@ window.Timeline = {
     currentProjectId = project.id;
     currentUser = currentUser || (users && users[0]);
     try {
-      currentRecords = await api('/api/projects/' + project.id + '/timeline');
+      const records = await api('/api/projects/' + project.id + '/timeline');
+      currentRecords = this.mergeRecordsWithDrafts(records || []);
     } catch {
       currentRecords = [];
     }
     showModal(project, users);
+  },
+
+  mergeRecordsWithDrafts(records) {
+    if (!window.SyncManager) return records;
+    const drafts = window.SyncManager.getDrafts().filter(
+      d => d.type === 'timeline' && d.projectId === currentProjectId && d.operation === 'create'
+    );
+    const draftRecords = drafts.map(d => ({
+      ...d.data,
+      id: d.id,
+      type: 'manual',
+      version: d.baseVersion,
+      createdAt: d.createdAt,
+      _isDraft: true,
+      _draftId: d.id
+    }));
+    return [...draftRecords, ...records];
   },
 
   getLatest(records) {
@@ -26,25 +55,19 @@ window.Timeline = {
   formatLatestCard(record) {
     if (!record) return '<div class="timeline-empty">暂无过程记录</div>';
     const isSystem = record.type === "system";
+    const isDraft = record._isDraft;
     return (
-      '<div class="timeline-latest">' +
+      '<div class="timeline-latest ' + (isDraft ? 'draft-record' : '') + '">' +
         '<div class="timeline-latest-head">' +
-          '<span class="timeline-dot ' + (isSystem ? 'system' : 'manual') + '"></span>' +
+          '<span class="timeline-dot ' + (isSystem ? 'system' : 'manual') + (isDraft ? ' draft' : '') + '"></span>' +
           '<b>' + (isSystem ? '[系统] ' + record.systemMessage : record.operator + ' · ' + record.date) + '</b>' +
+          (isDraft ? '<span class="timeline-badge draft">本地草稿</span>' : '') +
         '</div>' +
         (isSystem ? '' : '<div class="timeline-latest-body">' + escapeHtml(record.steps).slice(0, 40) + (record.steps.length > 40 ? '…' : '') + '</div>') +
       '</div>'
     );
   }
 };
-
-function api(path, options) {
-  const viewerEl = document.querySelector('#viewer');
-  const viewerId = viewerEl ? viewerEl.value : '';
-  const headers = { "Content-Type": "application/json" };
-  if (viewerId) headers["X-Viewer-Id"] = viewerId;
-  return fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers })).then(r => r.json());
-}
 
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -164,11 +187,16 @@ async function submitRecord() {
     });
 
     if (res._savedAsDraft) {
-      showAlert('网络不可用，已保存为本地草稿', false);
+      showAlert('网络不可用，已保存为本地草稿，联网后可在同步管理中上传', false);
+      currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
       document.getElementById('timeline-form-wrap').style.display = 'none';
       document.getElementById('timeline-add-btn').style.display = 'inline-block';
+      renderList();
       if (typeof window.onTimelineUpdated === 'function') {
         window.onTimelineUpdated(currentProjectId, currentRecords);
+      }
+      if (typeof window._syncPanel !== 'undefined' && window._syncPanel) {
+        window._syncPanel.refresh();
       }
       return;
     }
@@ -189,6 +217,7 @@ async function submitRecord() {
 
     showAlert('记录已添加', false);
     currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
+    currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
     document.getElementById('timeline-form-wrap').style.display = 'none';
     document.getElementById('timeline-add-btn').style.display = 'inline-block';
     renderList();
@@ -214,10 +243,11 @@ function renderList() {
   const sorted = [...currentRecords].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   list.innerHTML = sorted.map((r, idx) => {
     const isSystem = r.type === "system";
+    const isDraft = r._isDraft;
     return (
-      '<div class="timeline-item ' + (isSystem ? 'system' : 'manual') + '">' +
+      '<div class="timeline-item ' + (isSystem ? 'system' : 'manual') + (isDraft ? ' draft-record' : '') + '">' +
         '<div class="timeline-item-line">' +
-          '<span class="timeline-item-dot ' + (isSystem ? 'system' : 'manual') + '"></span>' +
+          '<span class="timeline-item-dot ' + (isSystem ? 'system' : 'manual') + (isDraft ? ' draft' : '') + '"></span>' +
           (idx < sorted.length - 1 ? '<span class="timeline-item-connector"></span>' : '') +
         '</div>' +
         '<div class="timeline-item-body">' +
@@ -225,6 +255,7 @@ function renderList() {
             (isSystem
               ? '<span class="timeline-badge system">系统</span> <b>' + escapeHtml(r.systemMessage || '状态变更') + '</b>'
               : '<span class="timeline-badge manual">人工</span> <b>' + escapeHtml(r.operator) + '</b>') +
+            (isDraft ? '<span class="timeline-badge draft">本地草稿</span>' : '') +
             '<span class="timeline-item-date">' + escapeHtml(r.date) + '</span>' +
           '</div>' +
           (isSystem ? '' :

@@ -23,14 +23,16 @@ class ConflictResolver {
     this.container = container;
     this.conflict = options.conflict || null;
     this.queueItemId = options.queueItemId || null;
+    this.draftId = options.draftId || null;
     this.onResolved = options.onResolved || (() => {});
     this.onCancel = options.onCancel || (() => {});
     this.resolutions = {};
   }
 
-  setConflict(conflict, queueItemId) {
+  setConflict(conflict, queueItemId, draftId) {
     this.conflict = conflict;
     this.queueItemId = queueItemId;
+    this.draftId = draftId || null;
     this.resolutions = {};
     this.render();
   }
@@ -208,6 +210,11 @@ class ConflictResolver {
     try {
       const result = await SyncManager.executeSync(this.queueItemId, resolution, resolutionFields);
       if (result.success) {
+        SyncManager.removeFromSyncQueue(this.queueItemId);
+        if (this.draftId) {
+          SyncManager.deleteDraft(this.draftId);
+        }
+        SyncManager.notifyDraftsChanged();
         this.onResolved({
           success: true,
           resolution,

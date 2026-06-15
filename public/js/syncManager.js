@@ -58,12 +58,15 @@ window.SyncManager = {
       const res = await fetch(path, { ...options, headers });
       const data = await res.json();
 
-      if (res.status === 409 && data.error === 'version_conflict') {
-        return { conflict: true, ...data };
+      if (res.status === 409 && (data.error === 'version_conflict' || data.error === 'conflict_detected')) {
+        return { ...data, _conflictResponse: true };
       }
 
       if (!res.ok) {
-        throw new Error(data.message || data.error || '请求失败');
+        const err = new Error(data.message || data.error || '请求失败');
+        err.error = data.error;
+        err.data = data;
+        throw err;
       }
 
       return data;
@@ -307,27 +310,47 @@ window.SyncManager = {
 
   async queueAndSync(draftIds) {
     const queueResults = this.addToSyncQueue(draftIds);
-    const queuedIds = queueResults.filter(r => r.status === 'queued').map(r => r.queueId);
+    const queued = queueResults.filter(r => r.status === 'queued');
 
     const results = [];
-    for (const queueId of queuedIds) {
+    for (const q of queued) {
       try {
-        const result = await this.executeSync(queueId);
-        if (result.conflict) {
-          results.push({ queueId, status: 'conflict', conflict: result.conflict });
+        const result = await this.executeSync(q.queueId);
+        if (result._conflictResponse) {
+          results.push({
+          queueId: q.queueId,
+          draftId: q.draftId,
+          status: 'conflict',
+          conflict: result.conflict || result
+          });
         } else if (result.success) {
-          this.removeFromSyncQueue(queueId);
-          const queueItem = this.getSyncQueue().find(q => q.id === queueId);
-          if (queueItem) this.deleteDraft(queueItem.draftId);
-          results.push({ queueId, status: 'success', result });
+          results.push({
+          queueId: q.queueId,
+          draftId: q.draftId,
+          status: 'success',
+          result
+          });
+          this.removeFromSyncQueue(q.queueId);
+          this.deleteDraft(q.draftId);
         } else {
-          results.push({ queueId, status: 'failed', error: result.error });
+          results.push({
+          queueId: q.queueId,
+          draftId: q.draftId,
+          status: 'failed',
+          error: result.error || result.message || '同步失败'
+          });
         }
       } catch (error) {
-        results.push({ queueId, status: 'failed', error: error.message });
+        results.push({
+          queueId: q.queueId,
+          draftId: q.draftId,
+          status: 'failed',
+          error: error.message
+        });
       }
     }
 
+    this.notifyDraftsChanged();
     return results;
   },
 
@@ -339,20 +362,41 @@ window.SyncManager = {
     for (const item of queue) {
       try {
         const result = await this.executeSync(item.id);
-        if (result.conflict) {
-          results.push({ queueId: item.id, status: 'conflict', conflict: result.conflict });
+        if (result._conflictResponse) {
+          results.push({
+            queueId: item.id,
+            draftId: item.draftId,
+            status: 'conflict',
+            conflict: result.conflict || result
+          });
         } else if (result.success) {
+          results.push({
+            queueId: item.id,
+            draftId: item.draftId,
+            status: 'success',
+            result
+          });
           this.removeFromSyncQueue(item.id);
           this.deleteDraft(item.draftId);
-          results.push({ queueId: item.id, status: 'success', result });
         } else {
-          results.push({ queueId: item.id, status: 'failed', error: result.error });
+          results.push({
+            queueId: item.id,
+            draftId: item.draftId,
+            status: 'failed',
+            error: result.error || '同步失败'
+          });
         }
       } catch (error) {
-        results.push({ queueId: item.id, status: 'failed', error: error.message });
+        results.push({
+          queueId: item.id,
+          draftId: item.draftId,
+          status: 'failed',
+          error: error.message
+        });
       }
     }
 
+    this.notifyDraftsChanged();
     if (results.length > 0 && typeof this.onAutoSyncComplete === 'function') {
       this.onAutoSyncComplete(results);
     }

@@ -48,7 +48,7 @@
       "owner": "严澈",
       "dueDate": "2026-06-25",
       "photos": "",
-      "version": 3
+      "version": 5
     },
     {
       "id": "R-1781488677239",
@@ -512,6 +512,78 @@
   },
   "auditLogs": [
     {
+      "id": "AUD-1781504132132-ub5sdc",
+      "projectId": "R-1781488785089",
+      "actionType": "project_update",
+      "actionLabel": "修改项目",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "api",
+      "timestamp": "2026-06-15T06:15:32.132Z",
+      "beforeState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "owner": "严澈",
+        "dueDate": "2026-06-25",
+        "status": "进行中",
+        "photos": ""
+      },
+      "afterState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "owner": "严澈",
+        "dueDate": "2026-06-25",
+        "status": "进行中",
+        "photos": ""
+      },
+      "changes": [],
+      "summary": "项目创建",
+      "note": "[测试] 模拟他人修改项目以制造冲突",
+      "relatedId": null
+    },
+    {
+      "id": "AUD-1781504049770-ar3jr5",
+      "projectId": "R-1781488785089",
+      "actionType": "project_update",
+      "actionLabel": "修改项目",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "api",
+      "timestamp": "2026-06-15T06:14:09.770Z",
+      "beforeState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "owner": "严澈",
+        "dueDate": "2026-06-25",
+        "status": "进行中",
+        "photos": ""
+      },
+      "afterState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "owner": "严澈",
+        "dueDate": "2026-06-25",
+        "status": "进行中",
+        "photos": ""
+      },
+      "changes": [],
+      "summary": "项目创建",
+      "note": "[测试] 模拟他人修改项目以制造冲突",
+      "relatedId": null
+    },
+    {
       "id": "AUD-1781502295952-lgbov5",
       "projectId": "R-1781488785089",
       "actionType": "project_update",
@@ -743,6 +815,42 @@
       "createdBy": "u-admin",
       "createdAt": "2026-06-15T05:45:29.173Z",
       "updatedAt": "2026-06-15T05:45:29.174Z",
+      "status": "pending",
+      "syncAttempts": 0,
+      "lastSyncError": null
+    },
+    {
+      "id": "D-1781504095731-eslcne",
+      "type": "project",
+      "entityType": "project",
+      "operation": "create",
+      "entityId": null,
+      "data": {
+        "title": "清代线装小说（本地修改）",
+        "damage": "本地修改的破损描述"
+      },
+      "baseVersion": 1,
+      "createdBy": "u-admin",
+      "createdAt": "2026-06-15T06:14:55.731Z",
+      "updatedAt": "2026-06-15T06:14:55.731Z",
+      "status": "pending",
+      "syncAttempts": 0,
+      "lastSyncError": null
+    },
+    {
+      "id": "D-1781504169566-fqx8g8",
+      "type": "project",
+      "entityType": "project",
+      "operation": "create",
+      "entityId": null,
+      "data": {
+        "title": "清代线装小说（本地修改）",
+        "damage": "本地修改的破损描述"
+      },
+      "baseVersion": 1,
+      "createdBy": "u-admin",
+      "createdAt": "2026-06-15T06:16:09.566Z",
+      "updatedAt": "2026-06-15T06:16:09.566Z",
       "status": "pending",
       "syncAttempts": 0,
       "lastSyncError": null

@@ -493,9 +493,9 @@ function initSyncComponents() {
 
   const syncPanel = new window.SyncPanel(syncPanelContainer, {
     conflictResolver,
-    onConflict: (conflict, queueId) => {
+    onConflict: (conflict, queueId, draftId) => {
       conflictModal.style.display = 'flex';
-      conflictResolver.setConflict(conflict, queueId);
+      conflictResolver.setConflict(conflict, queueId, draftId);
     },
     onSyncComplete: async () => {
       if (typeof window.onSyncComplete === 'function') {

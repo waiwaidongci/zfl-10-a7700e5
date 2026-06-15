@@ -2794,6 +2794,25 @@ nav.tabs a.active {
   margin-top: 8px;
 }
 
+.timeline-item.draft-record {
+  border: 1px dashed #d49a3c;
+  background: #fffbf0;
+}
+
+.timeline-item-dot.draft {
+  background: #d49a3c !important;
+  box-shadow: 0 0 0 3px #fff5e6;
+}
+
+.timeline-badge.draft {
+  background: #fff5e6;
+  border: 1px solid #e0c080;
+  color: #8a6020;
+  font-size: 11px;
+  padding: 1px 6px;
+  margin-left: 6px;
+}
+
 .sync-panel {
   background: #fff;
   border: 1px solid var(--line);

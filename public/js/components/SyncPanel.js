@@ -226,8 +226,8 @@ class SyncPanel {
 
       if (conflicts.length > 0) {
         this.showMessage(`检测到 ${conflicts.length} 个冲突，请处理`, 'warning');
-        if (this.conflictResolver) {
-          this.conflictResolver.setConflict(conflicts[0].conflict, conflicts[0].queueId);
+        if (this.onConflict) {
+          this.onConflict(conflicts[0].conflict, conflicts[0].queueId, conflicts[0].draftId);
         }
       } else if (successes.length > 0 && failures.length === 0) {
         this.showMessage(`成功同步 ${successes.length} 个草稿`, 'success');
@@ -249,8 +249,8 @@ class SyncPanel {
 
       if (result?.status === 'conflict') {
         this.showMessage('检测到冲突，请处理', 'warning');
-        if (this.conflictResolver) {
-          this.conflictResolver.setConflict(result.conflict, result.queueId);
+        if (this.onConflict) {
+          this.onConflict(result.conflict, result.queueId, result.draftId);
         }
       } else if (result?.status === 'success') {
         this.showMessage('同步成功', 'success');
