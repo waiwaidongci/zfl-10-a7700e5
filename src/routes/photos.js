@@ -1,4 +1,5 @@
 import { parseBody, saveDb, sendJson } from "../db.js";
+import { getViewer } from "../utils/permissions.js";
 
 const VALID_STAGES = ["before", "during", "after"];
 
@@ -7,8 +8,16 @@ export async function handlePhotos(req, res, db, pathname) {
   if (!photosMatch) return false;
 
   const projectId = photosMatch[1];
+  const viewerId = req.headers["x-viewer-id"];
+  const viewer = getViewer(db, viewerId);
+
   const project = db.projects.find((item) => item.id === projectId);
   if (!project) return sendJson(res, 404, { error: "project_not_found" });
+
+  if (!viewer) return sendJson(res, 401, { error: "unauthorized", message: "请先登录" });
+  if (viewer.role !== "admin" && project.owner !== viewer.name) {
+    return sendJson(res, 403, { error: "forbidden", message: "无权操作该项目的照片" });
+  }
 
   if (!project.photoArchive) {
     project.photoArchive = { before: [], during: [], after: [] };

@@ -7,6 +7,11 @@ const intakeInfo = document.querySelector("#intakeInfo");
 const templateSelectContainer = document.querySelector("#templateSelectContainer");
 const materialCheckboxes = document.querySelector("#materialCheckboxes");
 const stockHint = document.querySelector("#stockHint");
+const filterStatus = document.querySelector("#filterStatus");
+const filterOwner = document.querySelector("#filterOwner");
+const filterOverdue = document.querySelector("#filterOverdue");
+const filterTemplate = document.querySelector("#filterTemplate");
+const filterReset = document.querySelector("#filterReset");
 
 let users = [];
 let projects = [];
@@ -16,6 +21,7 @@ let templates = [];
 let expandedProjectId = null;
 let detailInstance = null;
 let templateSelector = null;
+let filtersLoadedFromUrl = false;
 
 async function api(path, options) {
   if (window.SyncManager) {
@@ -46,26 +52,154 @@ function statusClass(s) {
   return 'active';
 }
 
+function getFiltersStorageKey() {
+  const viewerId = viewer ? viewer.value : 'default';
+  return 'projectFilters_' + viewerId;
+}
+
+function saveFilters() {
+  const filters = {
+    status: filterStatus.value,
+    owner: filterOwner.value,
+    overdue: filterOverdue.value,
+    template: filterTemplate.value
+  };
+  try {
+    localStorage.setItem(getFiltersStorageKey(), JSON.stringify(filters));
+  } catch (e) {}
+
+  const params = new URLSearchParams();
+  if (filters.status) params.set('status', filters.status);
+  if (filters.owner) params.set('owner', filters.owner);
+  if (filters.overdue) params.set('overdue', filters.overdue);
+  if (filters.template) params.set('template', filters.template);
+  const qs = params.toString();
+  const newUrl = window.location.pathname + (qs ? '?' + qs : '');
+  window.history.replaceState(null, '', newUrl);
+}
+
+function loadFilters(visibleProjects) {
+  const validOwners = visibleProjects ? [...new Set(visibleProjects.map(p => p.owner))] : [];
+  let filters = null;
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('status') || params.has('owner') || params.has('overdue') || params.has('template')) {
+    filters = {
+      status: params.get('status') || '',
+      owner: params.get('owner') || '',
+      overdue: params.get('overdue') || '',
+      template: params.get('template') || ''
+    };
+  }
+
+  if (!filters) {
+    try {
+      const stored = localStorage.getItem(getFiltersStorageKey());
+      if (stored) filters = JSON.parse(stored);
+    } catch (e) {}
+  }
+
+  if (!filters) return;
+
+  if (filters.status && filterStatus) {
+    const validStatuses = [...filterStatus.options].map(o => o.value);
+    if (validStatuses.includes(filters.status)) {
+      filterStatus.value = filters.status;
+    }
+  }
+  if (filters.overdue && filterOverdue) filterOverdue.value = filters.overdue;
+  if (filters.template && filterTemplate) filterTemplate.value = filters.template;
+  if (filters.owner && filterOwner) {
+    if (validOwners.length === 0 || validOwners.includes(filters.owner)) {
+      filterOwner.value = filters.owner;
+    }
+  }
+}
+
+function resetFilters() {
+  filterStatus.value = '';
+  filterOwner.value = '';
+  filterOverdue.value = '';
+  filterTemplate.value = '';
+  saveFilters();
+}
+
+function applyFilters(list) {
+  let filtered = list;
+  if (filterStatus.value) {
+    filtered = filtered.filter(p => p.status === filterStatus.value);
+  }
+  if (filterOwner.value) {
+    filtered = filtered.filter(p => p.owner === filterOwner.value);
+  }
+  if (filterOverdue.value === 'yes') {
+    filtered = filtered.filter(isOverdue);
+  } else if (filterOverdue.value === 'no') {
+    filtered = filtered.filter(p => !isOverdue(p));
+  }
+  if (filterTemplate.value === 'yes') {
+    filtered = filtered.filter(p => !!p.templateSnapshot);
+  } else if (filterTemplate.value === 'no') {
+    filtered = filtered.filter(p => !p.templateSnapshot);
+  }
+  return filtered;
+}
+
+function renderOwnerOptions(visibleProjects) {
+  const owners = [...new Set(visibleProjects.map(p => p.owner))].sort();
+  const current = filterOwner.value;
+  filterOwner.innerHTML =
+    '<option value="">全部</option>' +
+    owners.map(o => '<option value="' + escapeHtml(o) + '">' + escapeHtml(o) + '</option>').join('');
+  if (owners.includes(current)) {
+    filterOwner.value = current;
+  }
+}
+
 function render() {
   const user = users.find((item) => item.id === viewer.value) || users[0];
   const isAdmin = user.role === "admin";
   const visible = isAdmin ? projects : projects.filter((item) => item.owner === user.name);
-  const realProjects = projects.filter(p => !p._isDraft);
-  const active = realProjects.filter((item) => item.status !== "已完成").length;
-  const overdue = realProjects.filter(isOverdue).length;
-  const workload = realProjects.reduce((map, item) => {
+
+  renderOwnerOptions(visible);
+
+  if (!filtersLoadedFromUrl) {
+    loadFilters(visible);
+    filtersLoadedFromUrl = true;
+  }
+
+  const filtered = applyFilters(visible);
+
+  const realFiltered = filtered.filter(p => !p._isDraft);
+  const active = realFiltered.filter((item) => item.status !== "已完成").length;
+  const overdue = realFiltered.filter(isOverdue).length;
+  const completed = realFiltered.filter((item) => item.status === "已完成").length;
+  const workload = realFiltered.reduce((map, item) => {
     map[item.owner] = (map[item.owner] || 0) + 1;
     return map;
   }, {});
 
+  const hasFilter = filterStatus.value || filterOwner.value || filterOverdue.value || filterTemplate.value;
+
   statsEl.innerHTML =
     '<div class="stat"><span>进行中</span><strong>' + active + '</strong></div>' +
     '<div class="stat"><span>逾期</span><strong>' + overdue + '</strong></div>' +
+    '<div class="stat"><span>已完成</span><strong>' + completed + '</strong></div>' +
     '<div class="stat"><span>负责人工作量</span><strong>' +
     Object.entries(workload).map(([k, v]) => k + v).join(" / ") +
     '</strong></div>';
 
-  projectsEl.innerHTML = visible.map((p) => {
+  const filterBarEl = document.querySelector('#filterBar');
+  const existingCount = filterBarEl.querySelector('.filter-result-count');
+  if (existingCount) existingCount.remove();
+  if (hasFilter) {
+    const span = document.createElement('span');
+    span.className = 'filter-result-count';
+    span.textContent = '筛选结果：' + filtered.length + ' / ' + visible.length;
+    filterBarEl.appendChild(span);
+  }
+
+  projectsEl.innerHTML = filtered.map((p) => {
     const isDraft = p._isDraft === true;
     const cls = (isOverdue(p) ? 'overdue' : '') + (isDraft ? ' draft-project' : '');
     const expanded = expandedProjectId === p.id;
@@ -397,8 +531,24 @@ window.onAuditRollback = async (projectId) => {
 viewer.onchange = () => {
   localStorage.setItem("viewerId", viewer.value);
   if (window.Timeline) window.Timeline.setUser(users.find(u => u.id === viewer.value) || users[0]);
+  filtersLoadedFromUrl = false;
   render();
 };
+
+function onFilterChange() {
+  saveFilters();
+  render();
+}
+
+filterStatus.onchange = onFilterChange;
+filterOwner.onchange = onFilterChange;
+filterOverdue.onchange = onFilterChange;
+filterTemplate.onchange = onFilterChange;
+filterReset.onclick = () => {
+  resetFilters();
+  render();
+};
+
 intakeSelect.onchange = onIntakeChange;
 
 form.onsubmit = async (event) => {

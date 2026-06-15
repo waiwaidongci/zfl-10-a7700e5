@@ -2,7 +2,7 @@ import { parseBody, saveDb, sendJson } from "../db.js";
 import { createSystemRecord } from "../utils/timeline.js";
 import { createSnapshot, applyTemplateToProject } from "../utils/templateSnapshots.js";
 import { validateProject } from "../utils/validation.js";
-import { getViewer } from "../utils/permissions.js";
+import { getViewer, filterProjectsByPermission } from "../utils/permissions.js";
 import { recordAudit, ACTION_TYPES, SOURCES } from "../utils/audit.js";
 import { deepClone } from "../utils/diff.js";
 import { incrementVersion } from "../utils/sync.js";
@@ -24,7 +24,9 @@ function sanitizeProjectInput(input) {
 
 export async function handleProjects(req, res, db, pathname) {
   if (req.method === "GET" && pathname === "/api/projects") {
-    return sendJson(res, 200, db.projects);
+    const viewerId = req.headers["x-viewer-id"];
+    const filtered = filterProjectsByPermission(db, viewerId);
+    return sendJson(res, 200, filtered);
   }
 
   if (req.method === "POST" && pathname === "/api/projects/apply-template") {
@@ -119,8 +121,16 @@ export async function handleProjects(req, res, db, pathname) {
 
   const match = pathname.match(/^\/api\/projects\/([^/]+)$/);
   if (match && req.method === "PATCH") {
+    const viewerId = req.headers["x-viewer-id"];
+    const viewer = getViewer(db, viewerId);
+
     const project = db.projects.find((item) => item.id === match[1]);
     if (!project) return sendJson(res, 404, { error: "project_not_found" });
+
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized", message: "请先登录" });
+    if (viewer.role !== "admin" && project.owner !== viewer.name) {
+      return sendJson(res, 403, { error: "forbidden", message: "无权修改该项目" });
+    }
 
     const rawBody = await parseBody(req);
     const clientVersion = rawBody.clientVersion;
@@ -152,9 +162,6 @@ export async function handleProjects(req, res, db, pathname) {
 
     incrementVersion(project);
     Object.assign(project, body, { updatedAt: new Date().toISOString().slice(0, 10) });
-
-    const viewerId = req.headers["x-viewer-id"];
-    const viewer = getViewer(db, viewerId);
 
     const statusChanged = body.status && body.status !== oldStatus;
     if (statusChanged) {

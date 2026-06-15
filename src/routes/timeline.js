@@ -2,25 +2,37 @@ import { parseBody, saveDb, sendJson } from "../db.js";
 import { createTimelineRecord, validateTimelineRecord, sortRecords } from "../utils/timeline.js";
 import { incrementVersion } from "../utils/sync.js";
 import { deepClone } from "../utils/diff.js";
+import { getViewer, filterProjectsByPermission } from "../utils/permissions.js";
 
 export async function handleTimeline(req, res, db, pathname) {
   const listMatch = pathname.match(/^\/api\/projects\/([^/]+)\/timeline$/);
   const recordMatch = pathname.match(/^\/api\/projects\/([^/]+)\/timeline\/([^/]+)$/);
 
   const viewerId = req.headers["x-viewer-id"];
-  const viewer = db.users.find((u) => u.id === viewerId);
+  const viewer = getViewer(db, viewerId);
+
+  function canAccessProject(projectId) {
+    const project = db.projects.find((item) => item.id === projectId);
+    if (!project) return null;
+    if (!viewer) return false;
+    if (viewer.role === "admin") return project;
+    if (project.owner === viewer.name) return project;
+    return false;
+  }
 
   if (listMatch && req.method === "GET") {
-    const project = db.projects.find((item) => item.id === listMatch[1]);
-    if (!project) return sendJson(res, 404, { error: "project_not_found", message: "项目不存在" });
+    const project = canAccessProject(listMatch[1]);
+    if (project === null) return sendJson(res, 404, { error: "project_not_found", message: "项目不存在" });
+    if (project === false) return sendJson(res, 403, { error: "forbidden", message: "无权查看该项目" });
     return sendJson(res, 200, sortRecords(project.timelineRecords || []));
   }
 
   if (listMatch && req.method === "POST") {
     if (!viewer) return sendJson(res, 401, { error: "unauthorized", message: "请先登录" });
 
-    const project = db.projects.find((item) => item.id === listMatch[1]);
-    if (!project) return sendJson(res, 404, { error: "project_not_found", message: "项目不存在" });
+    const project = canAccessProject(listMatch[1]);
+    if (project === null) return sendJson(res, 404, { error: "project_not_found", message: "项目不存在" });
+    if (project === false) return sendJson(res, 403, { error: "forbidden", message: "无权操作该项目" });
 
     const input = await parseBody(req);
 
@@ -67,8 +79,9 @@ export async function handleTimeline(req, res, db, pathname) {
       return sendJson(res, 403, { error: "forbidden", message: "仅管理员可删除记录" });
     }
 
-    const project = db.projects.find((item) => item.id === recordMatch[1]);
-    if (!project) return sendJson(res, 404, { error: "project_not_found", message: "项目不存在" });
+    const project = canAccessProject(recordMatch[1]);
+    if (project === null) return sendJson(res, 404, { error: "project_not_found", message: "项目不存在" });
+    if (project === false) return sendJson(res, 403, { error: "forbidden", message: "无权操作该项目" });
 
     const idx = (project.timelineRecords || []).findIndex((r) => r.id === recordMatch[2]);
     if (idx === -1) return sendJson(res, 404, { error: "record_not_found", message: "记录不存在" });
