@@ -1,11 +1,67 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile, copyFile, unlink, access } from "node:fs/promises";
+import { existsSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runMigrations } from "./utils/migrations.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = join(__dirname, "..", "data", "restoration.json");
+const backupPath = join(__dirname, "..", "data", "restoration.json.backup");
+const maxBackups = 5;
+
+async function createBackup() {
+  try {
+    if (existsSync(dbPath)) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const timestampedBackup = join(
+        __dirname,
+        "..",
+        "data",
+        `restoration.json.backup-${timestamp}`
+      );
+      await copyFile(dbPath, timestampedBackup);
+
+      const backups = [];
+      const dataDir = dirname(dbPath);
+      const fs = await import("node:fs");
+      const files = fs.readdirSync(dataDir);
+      for (const file of files) {
+        if (file.startsWith("restoration.json.backup-")) {
+          const fullPath = join(dataDir, file);
+          const stat = fs.statSync(fullPath);
+          backups.push({ path: fullPath, mtime: stat.mtime });
+        }
+      }
+      backups.sort((a, b) => b.mtime - a.mtime);
+      for (let i = maxBackups; i < backups.length; i++) {
+        try {
+          await unlink(backups[i].path);
+        } catch (e) {
+          console.warn("Failed to delete old backup:", backups[i].path, e);
+        }
+      }
+
+      return timestampedBackup;
+    }
+  } catch (error) {
+    console.warn("Backup creation failed:", error);
+  }
+  return null;
+}
+
+function validateDbStructure(db) {
+  const errors = [];
+  if (!db || typeof db !== "object") {
+    errors.push("数据库不是有效的对象");
+    return errors;
+  }
+  if (!Array.isArray(db.users)) errors.push("users 字段缺失或不是数组");
+  if (!Array.isArray(db.projects)) errors.push("projects 字段缺失或不是数组");
+  if (!Array.isArray(db.templates)) errors.push("templates 字段缺失或不是数组");
+  if (!Array.isArray(db.templateVersions))
+    errors.push("templateVersions 字段缺失或不是数组");
+  return errors;
+}
 
 const seed = {
   users: [
@@ -99,19 +155,61 @@ export async function loadDb() {
     await writeFile(dbPath, JSON.stringify(initialDb, null, 2));
     return initialDb;
   }
-  const db = JSON.parse(await readFile(dbPath, "utf8"));
+
+  let db;
+  let rawData;
+  try {
+    rawData = await readFile(dbPath, "utf8");
+    db = JSON.parse(rawData);
+  } catch (error) {
+    console.error("Failed to parse database file:", error.message);
+    const backup = await createBackup();
+    if (backup) {
+      console.error("Backup created at:", backup);
+    }
+    throw new Error(`数据库文件损坏，已创建备份: ${error.message}`);
+  }
+
+  const structureErrors = validateDbStructure(db);
+  if (structureErrors.length > 0) {
+    console.warn("Database structure issues found:", structureErrors);
+  }
+
   let changed = false;
-  for (const key of Object.keys(seed)) {
-    if (!(key in db)) {
-      db[key] = JSON.parse(JSON.stringify(seed[key]));
+
+  const requiredCollections = ["users", "projects", "intakes", "materials"];
+  for (const key of requiredCollections) {
+    if (!(key in db) || !Array.isArray(db[key])) {
+      if (db[key] === undefined || db[key] === null) {
+        console.warn(`Initializing empty collection: ${key}`);
+        db[key] = JSON.parse(JSON.stringify(seed[key]));
+        changed = true;
+      } else if (!Array.isArray(db[key])) {
+        console.warn(`Collection ${key} is not an array, resetting to empty array`);
+        db[key] = [];
+        changed = true;
+      }
+    }
+  }
+
+  if (!Array.isArray(db.templates)) {
+    if (db.templates === undefined || db.templates === null) {
+      console.warn("Initializing templates collection");
+      db.templates = JSON.parse(JSON.stringify(seed.templates));
+      changed = true;
+    } else {
+      console.warn("templates collection is not an array, resetting");
+      db.templates = JSON.parse(JSON.stringify(seed.templates));
       changed = true;
     }
   }
+
   if (!db.templateVersions) {
     db.templateVersions = [];
     changed = true;
   }
-  if (db.projects) {
+
+  if (db.projects && Array.isArray(db.projects)) {
     for (const project of db.projects) {
       if (!project.reviewRecords) {
         project.reviewRecords = [];
@@ -131,18 +229,55 @@ export async function loadDb() {
       }
     }
   }
-  if (!db.templates) {
-    db.templates = JSON.parse(JSON.stringify(seed.templates));
-    changed = true;
-  }
+
   const migrated = runMigrations(db);
   if (migrated) changed = true;
-  if (changed) await writeFile(dbPath, JSON.stringify(db, null, 2));
+
+  if (changed) {
+    await createBackup();
+    await writeFile(dbPath, JSON.stringify(db, null, 2));
+  }
   return db;
 }
 
 export async function saveDb(db) {
-  await writeFile(dbPath, JSON.stringify(db, null, 2));
+  const structureErrors = validateDbStructure(db);
+  if (structureErrors.length > 0) {
+    console.warn("Saving database with structure issues:", structureErrors);
+  }
+
+  let jsonData;
+  try {
+    jsonData = JSON.stringify(db, null, 2);
+    JSON.parse(jsonData);
+  } catch (error) {
+    throw new Error(`数据库序列化失败: ${error.message}`);
+  }
+
+  if (existsSync(dbPath)) {
+    try {
+      const existingData = await readFile(dbPath, "utf8");
+      const existingDb = JSON.parse(existingData);
+
+      const protectCollections = ["projects", "templates", "users", "intakes", "materials"];
+      for (const col of protectCollections) {
+        const oldLen = Array.isArray(existingDb[col]) ? existingDb[col].length : 0;
+        const newLen = Array.isArray(db[col]) ? db[col].length : 0;
+        if (oldLen > 0 && newLen === 0) {
+          console.warn(
+            `Data loss detected: ${col} collection would be reduced from ${oldLen} to ${newLen} items. Creating backup first.`
+          );
+          await createBackup();
+          break;
+        }
+      }
+    } catch (error) {
+      console.warn("Pre-save data integrity check failed:", error);
+    }
+  }
+
+  await createBackup();
+  await writeFile(dbPath, jsonData);
 }
 
 export function sendJson(res, status, data) {

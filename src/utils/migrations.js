@@ -59,35 +59,74 @@ export function runMigrations(db) {
   const meta = getDbMeta(db);
   let changed = false;
 
+  if (!Array.isArray(meta.migrations)) {
+    meta.migrations = [];
+    changed = true;
+  }
+
+  const appliedVersions = new Set(meta.migrations.map((m) => m.version));
+
+  if (meta.schemaVersion === 0 || meta.schemaVersion === undefined) {
+    meta.schemaVersion = 1;
+    changed = true;
+  }
+
   while (meta.schemaVersion < CURRENT_SCHEMA_VERSION) {
     const nextVersion = meta.schemaVersion + 1;
     const migration = migrations.find((m) => m.from === meta.schemaVersion && m.to === nextVersion);
-    if (migration) {
-      const migrated = migration.run(db);
-      if (migrated) changed = true;
+
+    if (migration && !appliedVersions.has(nextVersion)) {
+      try {
+        const migrated = migration.run(db);
+        if (migrated) changed = true;
+        meta.schemaVersion = nextVersion;
+        meta.migrations.push({
+          version: nextVersion,
+          appliedAt: new Date().toISOString(),
+          status: "success"
+        });
+        appliedVersions.add(nextVersion);
+        changed = true;
+      } catch (error) {
+        meta.migrations.push({
+          version: nextVersion,
+          appliedAt: new Date().toISOString(),
+          status: "failed",
+          error: error.message
+        });
+        throw new Error(`Migration to version ${nextVersion} failed: ${error.message}`);
+      }
+    } else if (migration && appliedVersions.has(nextVersion)) {
+      meta.schemaVersion = nextVersion;
+      changed = true;
+    } else if (!migration) {
       meta.schemaVersion = nextVersion;
       meta.migrations.push({
         version: nextVersion,
-        appliedAt: new Date().toISOString()
+        appliedAt: new Date().toISOString(),
+        status: "skipped",
+        note: "No migration script found, version incremented only"
       });
-      changed = true;
-    } else {
-      meta.schemaVersion = nextVersion;
       changed = true;
     }
   }
 
-  if (meta.schemaVersion === 0) {
-    meta.schemaVersion = CURRENT_SCHEMA_VERSION;
-    for (const m of migrations) {
-      const migrated = m.run(db);
-      if (migrated) changed = true;
-      meta.migrations.push({
-        version: m.to,
-        appliedAt: new Date().toISOString()
-      });
+  for (const m of migrations) {
+    if (!appliedVersions.has(m.to) && m.to <= meta.schemaVersion) {
+      try {
+        const migrated = m.run(db);
+        if (migrated) changed = true;
+        meta.migrations.push({
+          version: m.to,
+          appliedAt: new Date().toISOString(),
+          status: "backfilled"
+        });
+        appliedVersions.add(m.to);
+        changed = true;
+      } catch (error) {
+        console.error(`Backfill migration to version ${m.to} failed:`, error);
+      }
     }
-    changed = true;
   }
 
   return changed;

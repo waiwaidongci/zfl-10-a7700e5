@@ -18,6 +18,86 @@
   ],
   "projects": [
     {
+      "id": "R-1781490332649",
+      "status": "进行中",
+      "updatedAt": "2026-06-15",
+      "reviewRecords": [],
+      "timelineRecords": [],
+      "photoArchive": {
+        "before": [],
+        "during": [],
+        "after": []
+      },
+      "templateSnapshot": null,
+      "title": "测试藏品2",
+      "era": "现代",
+      "damage": "破损",
+      "steps": "修复步骤详细内容",
+      "materials": "材料详细内容",
+      "owner": "测试人",
+      "dueDate": "2026-06-20"
+    },
+    {
+      "id": "R-1781490303256",
+      "status": "进行中",
+      "updatedAt": "2026-06-15",
+      "reviewRecords": [],
+      "timelineRecords": [],
+      "photoArchive": {
+        "before": [],
+        "during": [],
+        "after": []
+      },
+      "templateSnapshot": null,
+      "title": "测试藏品",
+      "era": "现代",
+      "damage": "破损",
+      "steps": "修复步骤详细内容",
+      "materials": "材料详细内容",
+      "owner": "测试人",
+      "dueDate": "2026-06-20"
+    },
+    {
+      "id": "R-1781490288328",
+      "status": "进行中",
+      "updatedAt": "2026-06-15",
+      "reviewRecords": [],
+      "timelineRecords": [],
+      "photoArchive": {
+        "before": [],
+        "during": [],
+        "after": []
+      },
+      "templateSnapshot": null,
+      "title": "测试藏品",
+      "era": "现代",
+      "damage": "破损",
+      "steps": "修复步骤",
+      "materials": "材料",
+      "owner": "测试人",
+      "dueDate": "2026-06-20"
+    },
+    {
+      "id": "R-1781490214929",
+      "status": "进行中",
+      "updatedAt": "2026-06-15",
+      "reviewRecords": [],
+      "timelineRecords": [],
+      "photoArchive": {
+        "before": [],
+        "during": [],
+        "after": []
+      },
+      "templateSnapshot": null,
+      "title": "测试藏品",
+      "era": "现代",
+      "damage": "破损",
+      "steps": "修复步骤",
+      "materials": "材料",
+      "owner": "测试人",
+      "dueDate": "2026-06-20"
+    },
+    {
       "id": "R-1781488785089",
       "status": "进行中",
       "updatedAt": "2026-06-15",
@@ -221,6 +301,19 @@
   ],
   "templates": [
     {
+      "id": "TPL-1781490214925",
+      "name": "安全测试模板",
+      "category": "测试类型",
+      "version": 1,
+      "steps": "1. 测试步骤内容\n2. 测试步骤内容2\n3. 测试步骤内容3",
+      "materials": "测试材料列表",
+      "estimatedDays": 5,
+      "reviewRequired": false,
+      "reviewNotes": "",
+      "createdAt": "2026-06-15",
+      "updatedAt": "2026-06-15"
+    },
+    {
       "id": "TPL-1781436048191",
       "name": "测试模板",
       "category": "测试类型",
@@ -274,6 +367,21 @@
     }
   ],
   "templateVersions": [
+    {
+      "id": "TV-1781490214925-cthcfc",
+      "templateId": "TPL-1781490214925",
+      "version": 1,
+      "name": "安全测试模板",
+      "category": "测试类型",
+      "steps": "1. 测试步骤内容\n2. 测试步骤内容2\n3. 测试步骤内容3",
+      "materials": "测试材料列表",
+      "estimatedDays": 5,
+      "reviewRequired": false,
+      "reviewNotes": "",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "createdAt": "2026-06-15"
+    },
     {
       "id": "TV-1781488694610-szi6ja",
       "templateId": "TPL-001",

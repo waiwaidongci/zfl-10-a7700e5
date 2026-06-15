@@ -55,9 +55,9 @@ export async function handleProjects(req, res, db, pathname) {
         if (!input.steps || !input.steps.trim()) input.steps = applied.steps;
         if (!input.materials || !input.materials.trim()) input.materials = applied.materials;
         if (!input.dueDate || !input.dueDate.trim()) input.dueDate = applied.dueDate;
+        delete input.templateId;
       }
     }
-    delete input.templateId;
 
     const errors = validateProject(input, { templates: db.templates });
     if (errors.length > 0) {
