@@ -14,11 +14,10 @@ function migration_v1_to_v2(db) {
 
   if (!db.templateVersions) {
     db.templateVersions = [];
-    for (const tpl of db.templates || []) {
-      db.templateVersions.push(createTemplateVersionRecord(tpl, { operator: "系统迁移", operatorId: "migration" }));
-    }
     changed = true;
   }
+
+  if (ensureTemplateVersionHistory(db)) changed = true;
 
   if (db.projects) {
     for (const project of db.projects) {
@@ -43,6 +42,57 @@ function migration_v1_to_v2(db) {
       }
       if (project.templateSnapshot === undefined) {
         project.templateSnapshot = null;
+        changed = true;
+      }
+    }
+  }
+
+  return changed;
+}
+
+function createVersionRecordFromSource(template, version, source) {
+  const isSnapshot = source && source.templateSnapshot;
+  const data = isSnapshot ? source.templateSnapshot : (source || template);
+  return {
+    id: `TV-${template.id}-v${version}`,
+    templateId: template.id,
+    version,
+    name: data.templateName || data.name || template.name,
+    category: data.templateCategory || data.category || template.category,
+    steps: data.steps || template.steps,
+    materials: data.materials || template.materials,
+    estimatedDays: data.estimatedDays || template.estimatedDays,
+    reviewRequired: data.reviewRequired !== undefined ? data.reviewRequired : template.reviewRequired,
+    reviewNotes: data.reviewNotes || "",
+    operator: "系统迁移",
+    operatorId: "migration",
+    createdAt: data.appliedAt || data.createdAt || template.createdAt || new Date().toISOString().slice(0, 10)
+  };
+}
+
+function findVersionSource(db, template, version) {
+  if (version === template.version) return template;
+  const project = (db.projects || []).find((item) =>
+    item.templateSnapshot
+    && item.templateSnapshot.templateId === template.id
+    && item.templateSnapshot.templateVersion === version
+  );
+  return project || template;
+}
+
+function ensureTemplateVersionHistory(db) {
+  if (!Array.isArray(db.templateVersions)) db.templateVersions = [];
+  let changed = false;
+
+  for (const template of db.templates || []) {
+    const latestVersion = Math.max(1, Number(template.version) || 1);
+    for (let version = 1; version <= latestVersion; version += 1) {
+      const exists = db.templateVersions.some((item) =>
+        item.templateId === template.id && Number(item.version) === version
+      );
+      if (!exists) {
+        const source = findVersionSource(db, template, version);
+        db.templateVersions.push(createVersionRecordFromSource(template, version, source));
         changed = true;
       }
     }
