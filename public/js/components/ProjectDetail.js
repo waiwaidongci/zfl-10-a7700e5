@@ -126,6 +126,9 @@
       html += this._buildInfoCard("破损情况", p.damage, "🔬");
       html += this._buildInfoCard("修复步骤", p.steps, "📝");
       html += this._buildInfoCard("使用材料", p.materials, "📦");
+      if (p.templateSnapshot) {
+        html += this._buildTemplateSnapshotCard(p.templateSnapshot);
+      }
       if (lastReview) {
         html += this._buildHtmlInfoCard(
           "最近复核",
@@ -200,6 +203,29 @@
           '<div class="pd-info-value">' + htmlValue + '</div>' +
         '</div>'
       );
+    }
+
+    _buildTemplateSnapshotCard(snapshot) {
+      if (!snapshot) return '';
+      let html = '<div class="pd-snapshot-head" style="margin-bottom:6px;">';
+      html += '<span class="pd-snapshot-name">' + escapeHtml(snapshot.templateName || '未知模板') + '</span>';
+      html += '<span class="pd-snapshot-version">v' + (snapshot.templateVersion || 1) + '</span>';
+      html += '</div>';
+      html += '<div class="pd-snapshot-meta">';
+      html += '<span>类型：' + escapeHtml(snapshot.templateCategory || '-') + '</span>';
+      html += '<span>应用于：' + escapeHtml(snapshot.appliedAt || '-') + '</span>';
+      html += '</div>';
+      if (snapshot.estimatedDays) {
+        html += '<div class="pd-snapshot-meta"><span>预计工期：' + snapshot.estimatedDays + '天</span></div>';
+      }
+      if (snapshot.reviewRequired !== undefined) {
+        html += '<div class="pd-snapshot-meta"><span>复核：' + (snapshot.reviewRequired ? '需要' : '不需要') + '</span></div>';
+      }
+      if (snapshot.reviewNotes) {
+        html += '<div class="pd-snapshot-notes" style="margin-top:6px;padding-top:6px;border-top:1px dashed #e0dcd2;font-size:12px;color:#6b6258;"><b>复核要求：</b>' + escapeHtml(snapshot.reviewNotes) + '</div>';
+      }
+      html += '<div class="pd-snapshot-hint" style="margin-top:8px;font-size:11px;color:#8a8278;font-style:italic;">* 此为项目创建时的模板快照，后续模板修改不影响本项目</div>';
+      return this._buildHtmlInfoCard("应用模板", html, "📋");
     }
 
     _buildTimelineItem(record) {

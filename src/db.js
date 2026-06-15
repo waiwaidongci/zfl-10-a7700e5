@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runMigrations } from "./utils/migrations.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = join(__dirname, "..", "data", "restoration.json");
@@ -25,14 +26,78 @@ const seed = {
     { id: "M-002", name: "宣纸", unit: "张", quantity: 300, lowStockThreshold: 80, updatedAt: "2026-06-11" },
     { id: "M-003", name: "小麦淀粉浆", unit: "克", quantity: 2000, lowStockThreshold: 500, updatedAt: "2026-06-09" },
     { id: "M-004", name: "棉线", unit: "米", quantity: 150, lowStockThreshold: 30, updatedAt: "2026-06-12" }
+  ],
+  templates: [
+    {
+      id: "TPL-001",
+      name: "古籍散页修复流程",
+      category: "古籍散页",
+      version: 1,
+      steps: "1. 检查散页数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
+      materials: "楮皮纸、小麦淀粉浆",
+      estimatedDays: 7,
+      reviewRequired: true,
+      reviewNotes: "需检验补纸边缘贴合度及页面平整度",
+      createdAt: "2026-06-14",
+      updatedAt: "2026-06-14"
+    },
+    {
+      id: "TPL-002",
+      name: "线装书修复流程",
+      category: "线装书",
+      version: 1,
+      steps: "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+      materials: "楮皮纸、小麦淀粉浆、棉线、宣纸",
+      estimatedDays: 10,
+      reviewRequired: true,
+      reviewNotes: "需检验装订牢固度、封面托裱质量及整体平整度",
+      createdAt: "2026-06-14",
+      updatedAt: "2026-06-14"
+    },
+    {
+      id: "TPL-003",
+      name: "碑帖拓片修复流程",
+      category: "碑帖拓片",
+      version: 1,
+      steps: "1. 检查拓片整体状况，记录折痕与破损\n2. 使用蒸汽或微湿毛巾软化折痕\n3. 对断裂处进行托裱加固\n4. 使用宣纸进行整体托裱\n5. 压平干燥处理\n6. 修整边缘，检查墨迹完整性",
+      materials: "宣纸、小麦淀粉浆",
+      estimatedDays: 14,
+      reviewRequired: true,
+      reviewNotes: "需检验托裱平整度及墨迹是否受损",
+      createdAt: "2026-06-14",
+      updatedAt: "2026-06-14"
+    }
   ]
 };
 
 export async function loadDb() {
   if (!existsSync(dbPath)) {
     await mkdir(dirname(dbPath), { recursive: true });
-    await writeFile(dbPath, JSON.stringify(seed, null, 2));
-    return JSON.parse(JSON.stringify(seed));
+    const initialDb = JSON.parse(JSON.stringify(seed));
+    initialDb.templateVersions = [];
+    for (const tpl of initialDb.templates) {
+      initialDb.templateVersions.push({
+        id: `TV-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        templateId: tpl.id,
+        version: tpl.version,
+        name: tpl.name,
+        category: tpl.category,
+        steps: tpl.steps,
+        materials: tpl.materials,
+        estimatedDays: tpl.estimatedDays,
+        reviewRequired: tpl.reviewRequired,
+        reviewNotes: tpl.reviewNotes || "",
+        operator: "系统初始化",
+        operatorId: "system",
+        createdAt: tpl.createdAt
+      });
+    }
+    initialDb._meta = { schemaVersion: 2, migrations: [{ version: 2, appliedAt: new Date().toISOString() }] };
+    for (const project of initialDb.projects) {
+      project.templateSnapshot = null;
+    }
+    await writeFile(dbPath, JSON.stringify(initialDb, null, 2));
+    return initialDb;
   }
   const db = JSON.parse(await readFile(dbPath, "utf8"));
   let changed = false;
@@ -41,6 +106,10 @@ export async function loadDb() {
       db[key] = JSON.parse(JSON.stringify(seed[key]));
       changed = true;
     }
+  }
+  if (!db.templateVersions) {
+    db.templateVersions = [];
+    changed = true;
   }
   if (db.projects) {
     for (const project of db.projects) {
@@ -56,8 +125,18 @@ export async function loadDb() {
         project.photoArchive = { before: [], during: [], after: [] };
         changed = true;
       }
+      if (project.templateSnapshot === undefined) {
+        project.templateSnapshot = null;
+        changed = true;
+      }
     }
   }
+  if (!db.templates) {
+    db.templates = JSON.parse(JSON.stringify(seed.templates));
+    changed = true;
+  }
+  const migrated = runMigrations(db);
+  if (migrated) changed = true;
   if (changed) await writeFile(dbPath, JSON.stringify(db, null, 2));
   return db;
 }

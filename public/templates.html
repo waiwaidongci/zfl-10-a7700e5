@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>修复流程模板 - 古籍修复工作室</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>古籍修复工作室</h1>
+      <div class="meta">修复流程模板管理</div>
+    </div>
+    <select id="viewer"></select>
+  </header>
+  <nav class="tabs" style="padding: 0 28px;">
+    <a href="/">修复项目</a>
+    <a href="/intakes.html">入库接收登记</a>
+    <a href="/materials.html">材料库存台账</a>
+    <a href="/templates.html" class="active">修复流程模板</a>
+    <a href="/review.html">复核清单</a>
+    <a href="/calendar.html">排期日历</a>
+  </nav>
+  <main>
+    <form id="form" class="admin-only" style="display:none;">
+      <h2>新增流程模板</h2>
+      <label>模板名称</label><input name="name" required placeholder="例如：古籍散页修复流程">
+      <label>藏品类型</label><input name="category" required placeholder="例如：古籍散页、线装书、碑帖拓片">
+      <label>默认步骤</label><textarea name="steps" required placeholder="每行一个步骤，建议编号列出"></textarea>
+      <label>建议材料</label><textarea name="materials" required placeholder="多个材料用顿号分隔，例如：楮皮纸、小麦淀粉浆"></textarea>
+      <label>预计工期（天）</label><input name="estimatedDays" type="number" min="1" required placeholder="正整数天数">
+      <div class="template-review-row">
+        <label class="checkbox-label">
+          <input type="checkbox" name="reviewRequired" checked> 需要复核
+        </label>
+      </div>
+      <label>复核要求</label><textarea name="reviewNotes" placeholder="例如：需检验补纸边缘贴合度及页面平整度"></textarea>
+      <button type="submit">保存模板</button>
+    </form>
+    <section>
+      <div class="stats" id="stats"></div>
+      <div class="admin-only" id="adminHint" style="display:none;margin-bottom:12px;padding:10px 14px;background:#e6f0f2;border-radius:6px;font-size:13px;color:#2f6f73;">
+        您是管理员，可以创建、编辑和删除模板。模板修改会自动生成版本记录，已应用模板的历史项目不受影响。
+      </div>
+      <div class="worker-only" id="workerHint" style="display:none;margin-bottom:12px;padding:10px 14px;background:#f5f0e5;border-radius:6px;font-size:13px;color:#5d574e;">
+        您仅可查看模板。如需修改，请联系管理员。
+      </div>
+      <div class="grid" id="templates"></div>
+    </section>
+  </main>
+  <script src="/js/templates.js"></script>
+</body>
+</html>

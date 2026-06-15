@@ -2155,4 +2155,73 @@ nav.tabs a.active {
   }
 }
 
+.template-select {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.template-select select {
+  margin-bottom: 8px;
+}
+
+.template-preview {
+  background: #f5f0e5;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 13px;
+}
+
+.template-preview b { color: var(--ink); }
+
+.template-snapshot-badge {
+  background: #e6f0f2;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  display: inline-block;
+  margin-bottom: 2px;
+}
+
+.template-card {
+  position: relative;
+}
+
+.template-steps {
+  background: #faf7f0;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.template-card.editing {
+  border-color: var(--accent);
+}
+
+.template-card .edit-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+
+.template-review-row {
+  margin: 10px 0;
+}
+
+.template-review-row .checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  margin: 0;
+  font-size: 14px;
+}
+
+.template-review-row .checkbox-label input[type="checkbox"] {
+  width: auto;
+  cursor: pointer;
+}
+
 

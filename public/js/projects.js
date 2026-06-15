@@ -4,6 +4,7 @@ const projectsEl = document.querySelector("#projects");
 const statsEl = document.querySelector("#stats");
 const intakeSelect = document.querySelector("#intakeSelect");
 const intakeInfo = document.querySelector("#intakeInfo");
+const templateSelectContainer = document.querySelector("#templateSelectContainer");
 const materialCheckboxes = document.querySelector("#materialCheckboxes");
 const stockHint = document.querySelector("#stockHint");
 
@@ -11,8 +12,10 @@ let users = [];
 let projects = [];
 let intakes = [];
 let materials = [];
+let templates = [];
 let expandedProjectId = null;
 let detailInstance = null;
+let templateSelector = null;
 
 async function api(path, options) {
   const headers = { "Content-Type": "application/json" };
@@ -74,6 +77,12 @@ function render() {
     }
     var photoBadge = photoCount > 0 ? ' <span class="photo-count-badge">' + photoCount + '</span>' : '';
 
+    let snapshotBadge = '';
+    if (p.templateSnapshot) {
+      const snap = p.templateSnapshot;
+      snapshotBadge = '<div class="meta template-snapshot-badge" title="应用于 ' + escapeHtml(snap.appliedAt || '') + '">📋 模板：' + escapeHtml(snap.templateName) + ' v' + snap.templateVersion + '</div>';
+    }
+
     const articleCls = (expanded ? 'expanded ' : '') + cls;
     const detailBtnCls = 'card-detail-btn' + (expanded ? ' active' : '');
     const detailBtnText = expanded ? '收起详情 ▲' : '查看详情 ▼';
@@ -82,6 +91,7 @@ function render() {
       '<article class="' + articleCls + '" data-article-id="' + escapeHtml(p.id) + '">' +
       '<div class="row"><h3>' + escapeHtml(p.title) + '</h3><span class="pill ' + statusClass(p.status) + '">' + escapeHtml(p.status) + '</span></div>' +
       '<div class="meta">' + escapeHtml(p.era) + ' · ' + escapeHtml(p.owner) + ' · ' + escapeHtml(p.dueDate) + '</div>' +
+      snapshotBadge +
       '<div><b>破损</b> ' + escapeHtml(p.damage) + '</div>' +
       '<div><b>步骤</b> ' + escapeHtml(p.steps) + '</div>' +
       '<div><b>材料</b> ' + escapeHtml(p.materials) + '</div>' +
@@ -240,6 +250,28 @@ function renderMaterialCheckboxes() {
   });
 }
 
+function initTemplateSelector() {
+  if (!window.TemplateSelector || !templateSelectContainer) return;
+  templateSelector = new window.TemplateSelector(templateSelectContainer, {
+    groupByCategory: true,
+    showPreview: true,
+    onApply: (data) => {
+      if (!data) return;
+      const { applied } = data;
+      if (applied.steps && !form.steps.value.trim()) {
+        form.steps.value = applied.steps;
+      }
+      if (applied.materials && !form.materials.value.trim()) {
+        form.materials.value = applied.materials;
+      }
+      if (applied.dueDate && !form.dueDate.value) {
+        form.dueDate.value = applied.dueDate;
+      }
+    }
+  });
+  templateSelector.setTemplates(templates);
+}
+
 function onMaterialChange() {
   const selected = [];
   const selectedMaterials = [];
@@ -297,6 +329,7 @@ async function load() {
   projects = await api("/api/projects");
   intakes = await api("/api/intakes");
   materials = await api("/api/materials");
+  templates = await api("/api/templates");
 
   viewer.innerHTML = users.map((u) => '<option value="' + u.id + '">' + escapeHtml(u.name) + ' · ' + escapeHtml(u.role) + '</option>').join("");
   const savedViewerId = localStorage.getItem("viewerId");
@@ -311,6 +344,11 @@ async function load() {
 
   renderIntakeOptions();
   renderMaterialCheckboxes();
+  if (!templateSelector) {
+    initTemplateSelector();
+  } else {
+    templateSelector.setTemplates(templates);
+  }
   render();
 }
 
@@ -318,7 +356,7 @@ window.onTimelineUpdated = async (projectId) => {
   projects = await api("/api/projects");
   render();
   if (expandedProjectId === projectId) {
-    initDetailView(projectId);
+    initDetailView(expandedProjectId);
   }
 };
 
@@ -326,7 +364,7 @@ window.onPhotosUpdated = async (projectId) => {
   projects = await api("/api/projects");
   render();
   if (expandedProjectId === projectId) {
-    initDetailView(projectId);
+    initDetailView(expandedProjectId);
   }
 };
 
@@ -341,9 +379,18 @@ form.onsubmit = async (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(form).entries());
   delete data.intakeId;
-  await api("/api/projects", { method: "POST", body: JSON.stringify(data) });
+  const templateId = templateSelector ? templateSelector.getValue() : null;
+  if (templateId) {
+    data.templateId = templateId;
+  }
+  const result = await api("/api/projects", { method: "POST", body: JSON.stringify(data) });
+  if (result.error) {
+    alert(result.errors ? result.errors.join("\n") : result.error);
+    return;
+  }
   form.reset();
   intakeInfo.style.display = 'none';
+  if (templateSelector) templateSelector.reset();
   stockHint.style.display = 'none';
   await load();
 };

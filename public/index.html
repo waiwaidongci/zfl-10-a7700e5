@@ -19,6 +19,7 @@
     <a href="/" class="active">修复项目</a>
     <a href="/intakes.html">入库接收登记</a>
     <a href="/materials.html">材料库存台账</a>
+    <a href="/templates.html">修复流程模板</a>
     <a href="/review.html">复核清单</a>
     <a href="/calendar.html">排期日历</a>
   </nav>
@@ -30,6 +31,7 @@
         <select id="intakeSelect" name="intakeId"></select>
         <div class="intake-info" id="intakeInfo" style="display:none;"></div>
       </div>
+      <div class="template-select" id="templateSelectContainer"></div>
       <label>藏品名称</label><input name="title" required>
       <label>年代</label><input name="era" required>
       <label>破损类型</label><input name="damage" required>
@@ -54,6 +56,7 @@
   <script src="/js/components/PhotosGallery.js"></script>
   <script src="/js/components/PhotosCompare.js"></script>
   <script src="/js/components/ProjectDetail.js"></script>
+  <script src="/js/components/TemplateSelector.js"></script>
   <script src="/js/timeline.js"></script>
   <script src="/js/photos.js"></script>
   <script src="/js/projects.js"></script>

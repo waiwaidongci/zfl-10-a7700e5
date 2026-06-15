@@ -15,6 +15,7 @@ import { handleTimeline } from "./src/routes/timeline.js";
 import { handlePhotos } from "./src/routes/photos.js";
 import { handleCalendar } from "./src/routes/calendar.js";
 import { handleReports } from "./src/routes/reports.js";
+import { handleTemplates } from "./src/routes/templates.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "public");
@@ -82,6 +83,10 @@ const server = http.createServer(async (req, res) => {
       }
       if (pathname.startsWith("/api/materials")) {
         const handled = await handleMaterials(req, res, db, pathname);
+        if (handled !== false) return;
+      }
+      if (pathname.startsWith("/api/templates")) {
+        const handled = await handleTemplates(req, res, db, pathname);
         if (handled !== false) return;
       }
       return sendJson(res, 404, { error: "not_found" });
