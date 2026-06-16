@@ -1,6 +1,7 @@
 let currentProjectId = null;
 let currentRecords = [];
 let currentUser = null;
+let currentUsers = [];
 let availableMaterials = [];
 let selectedMaterialUsages = [];
 
@@ -30,7 +31,10 @@ window.Timeline = {
 
   async open(project, users) {
     currentProjectId = project.id;
-    currentUser = currentUser || (users && users[0]);
+    currentUsers = Array.isArray(users) ? users : [];
+    const viewerEl = document.querySelector('#viewer');
+    const viewerId = viewerEl ? viewerEl.value : '';
+    currentUser = currentUsers.find(u => u.id === viewerId) || currentUser || currentUsers[0];
     try {
       const records = await api('/api/projects/' + project.id + '/timeline');
       currentRecords = this.mergeRecordsWithDrafts(records || []);
@@ -98,15 +102,8 @@ function _timelineEscapeHtml(s) {
 function _timelineIsAdmin() {
   const viewerEl = document.querySelector('#viewer');
   const viewerId = viewerEl ? viewerEl.value : '';
-  const usersEl = document.querySelector('#users-data');
-  if (!usersEl) return false;
-  try {
-    const users = JSON.parse(usersEl.textContent || '[]');
-    const viewer = users.find(u => u.id === viewerId);
-    return viewer && viewer.role === 'admin';
-  } catch {
-    return false;
-  }
+  const viewer = currentUsers.find(u => u.id === viewerId) || currentUser;
+  return Boolean(viewer && viewer.role === 'admin');
 }
 
 function _timelineShowModal(project, users) {
