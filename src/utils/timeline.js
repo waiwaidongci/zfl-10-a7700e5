@@ -28,6 +28,24 @@ export function createSystemRecord({ operator, operatorId, oldStatus, newStatus 
   });
 }
 
+export function createTemplateSyncRecord({ operator, operatorId, templateName, oldVersion, newVersion, syncedFields }) {
+  const fieldLabels = [];
+  if (syncedFields?.steps) fieldLabels.push("修复步骤");
+  if (syncedFields?.materials) fieldLabels.push("使用材料");
+  if (syncedFields?.estimatedDays) fieldLabels.push("预计工期");
+  if (syncedFields?.reviewRequired || syncedFields?.reviewNotes) fieldLabels.push("复核要求");
+  const fieldsText = fieldLabels.length > 0 ? `（同步：${fieldLabels.join("、")}）` : "";
+  return createTimelineRecord({
+    type: "system",
+    operator: operator || "系统",
+    operatorId: operatorId || "",
+    systemMessage: `模板"${templateName}"从 v${oldVersion} 同步更新至 v${newVersion}${fieldsText}`,
+    steps: `模板版本升级：v${oldVersion} → v${newVersion}`,
+    materials: "",
+    notes: `同步字段：${fieldLabels.join("、") || "无"}`
+  });
+}
+
 export function validateTimelineRecord(input) {
   const errors = [];
   if (!input.operator || input.operator.trim() === "") {

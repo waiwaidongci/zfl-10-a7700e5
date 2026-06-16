@@ -1,6 +1,6 @@
 import { parseBody, saveDb, sendJson } from "../db.js";
-import { createSystemRecord } from "../utils/timeline.js";
-import { createSnapshot, applyTemplateToProject } from "../utils/templateSnapshots.js";
+import { createSystemRecord, createTemplateSyncRecord } from "../utils/timeline.js";
+import { createSnapshot, applyTemplateToProject, compareTemplateWithSnapshot, archiveSnapshot } from "../utils/templateSnapshots.js";
 import { validateProject } from "../utils/validation.js";
 import { getViewer, filterProjectsByPermission } from "../utils/permissions.js";
 import { recordAudit, ACTION_TYPES, SOURCES } from "../utils/audit.js";
@@ -187,6 +187,191 @@ export async function handleProjects(req, res, db, pathname) {
 
     await saveDb(db);
     return sendJson(res, 200, project);
+  }
+
+  const statusMatch = pathname.match(/^\/api\/projects\/([^/]+)\/template-status$/);
+  if (statusMatch && req.method === "GET") {
+    const projectId = statusMatch[1];
+    const project = db.projects.find((item) => item.id === projectId);
+    if (!project) return sendJson(res, 404, { error: "project_not_found" });
+
+    const snapshot = project.templateSnapshot;
+    if (!snapshot || !snapshot.templateId) {
+      return sendJson(res, 200, {
+        hasSnapshot: false,
+        hasUpdate: false,
+        hasChanges: false,
+        currentTemplate: null,
+        snapshotVersion: 0,
+        currentVersion: 0
+      });
+    }
+
+    const template = db.templates.find((t) => t.id === snapshot.templateId);
+    if (!template) {
+      return sendJson(res, 200, {
+        hasSnapshot: true,
+        templateDeleted: true,
+        hasUpdate: false,
+        hasChanges: false,
+        snapshotVersion: snapshot.templateVersion || 0,
+        currentVersion: 0
+      });
+    }
+
+    const comparison = compareTemplateWithSnapshot(template, snapshot);
+    return sendJson(res, 200, {
+      hasSnapshot: true,
+      templateDeleted: false,
+      hasUpdate: comparison?.isNewer || false,
+      hasChanges: comparison?.hasChanges || false,
+      snapshotVersion: snapshot.templateVersion || 0,
+      currentVersion: template.version,
+      templateId: template.id,
+      templateName: template.name,
+      appliedAt: snapshot.appliedAt
+    });
+  }
+
+  const diffMatch = pathname.match(/^\/api\/projects\/([^/]+)\/template-diff$/);
+  if (diffMatch && req.method === "GET") {
+    const viewerId = req.headers["x-viewer-id"];
+    const viewer = getViewer(db, viewerId);
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized", message: "请先登录" });
+    if (viewer.role !== "admin") {
+      return sendJson(res, 403, { error: "forbidden", message: "仅管理员可查看模板差异" });
+    }
+
+    const projectId = diffMatch[1];
+    const project = db.projects.find((item) => item.id === projectId);
+    if (!project) return sendJson(res, 404, { error: "project_not_found" });
+
+    const snapshot = project.templateSnapshot;
+    if (!snapshot || !snapshot.templateId) {
+      return sendJson(res, 400, { error: "no_template_snapshot", message: "项目未应用模板" });
+    }
+
+    const template = db.templates.find((t) => t.id === snapshot.templateId);
+    if (!template) {
+      return sendJson(res, 404, { error: "template_not_found", message: "关联模板已被删除" });
+    }
+
+    const comparison = compareTemplateWithSnapshot(template, snapshot);
+    return sendJson(res, 200, comparison);
+  }
+
+  const syncMatch = pathname.match(/^\/api\/projects\/([^/]+)\/sync-template$/);
+  if (syncMatch && req.method === "POST") {
+    const viewerId = req.headers["x-viewer-id"];
+    const viewer = getViewer(db, viewerId);
+    if (!viewer) return sendJson(res, 401, { error: "unauthorized", message: "请先登录" });
+    if (viewer.role !== "admin") {
+      return sendJson(res, 403, { error: "forbidden", message: "仅管理员可同步模板更新" });
+    }
+
+    const projectId = syncMatch[1];
+    const project = db.projects.find((item) => item.id === projectId);
+    if (!project) return sendJson(res, 404, { error: "project_not_found" });
+
+    const snapshot = project.templateSnapshot;
+    if (!snapshot || !snapshot.templateId) {
+      return sendJson(res, 400, { error: "no_template_snapshot", message: "项目未应用模板" });
+    }
+
+    const template = db.templates.find((t) => t.id === snapshot.templateId);
+    if (!template) {
+      return sendJson(res, 404, { error: "template_not_found", message: "关联模板已被删除" });
+    }
+
+    const input = await parseBody(req);
+    const selectedFields = input.fields || {};
+
+    const beforeState = deepClone(project);
+    const oldVersion = snapshot.templateVersion || 0;
+    const newVersion = template.version;
+
+    if (!project.templateSnapshotHistory) project.templateSnapshotHistory = [];
+    project.templateSnapshotHistory.unshift(
+      archiveSnapshot(deepClone(snapshot), {
+        syncedFrom: oldVersion,
+        operator: viewer.name,
+        operatorId: viewer.id
+      })
+    );
+
+    const syncedFields = {};
+    const newSnapshot = createSnapshot(template);
+
+    if (selectedFields.steps) {
+      project.steps = template.steps;
+      syncedFields.steps = true;
+    }
+    if (selectedFields.materials) {
+      project.materials = template.materials;
+      syncedFields.materials = true;
+    }
+    if (selectedFields.estimatedDays) {
+      const daysDiff = (template.estimatedDays || 0) - (snapshot.estimatedDays || 0);
+      if (daysDiff !== 0 && project.dueDate) {
+        const base = new Date(project.dueDate);
+        base.setDate(base.getDate() + daysDiff);
+        project.dueDate = base.toISOString().slice(0, 10);
+      }
+      syncedFields.estimatedDays = true;
+    }
+    if (selectedFields.reviewRequired) {
+      project.reviewRequired = template.reviewRequired !== false;
+      syncedFields.reviewRequired = true;
+    }
+    if (selectedFields.reviewNotes) {
+      syncedFields.reviewNotes = true;
+    }
+
+    Object.assign(snapshot, newSnapshot);
+    snapshot.appliedAt = new Date().toISOString().slice(0, 10);
+    snapshot.syncedFields = syncedFields;
+
+    if (!project.timelineRecords) project.timelineRecords = [];
+    project.timelineRecords.push(
+      createTemplateSyncRecord({
+        operator: viewer.name,
+        operatorId: viewer.id,
+        templateName: template.name,
+        oldVersion,
+        newVersion,
+        syncedFields
+      })
+    );
+
+    incrementVersion(project);
+    project.updatedAt = new Date().toISOString().slice(0, 10);
+
+    const fieldLabels = [];
+    if (syncedFields.steps) fieldLabels.push("修复步骤");
+    if (syncedFields.materials) fieldLabels.push("使用材料");
+    if (syncedFields.estimatedDays) fieldLabels.push("预计工期");
+    if (syncedFields.reviewRequired || syncedFields.reviewNotes) fieldLabels.push("复核要求");
+
+    recordAudit(db, {
+      projectId: project.id,
+      actionType: ACTION_TYPES.TEMPLATE_SYNC,
+      operator: viewer.name,
+      operatorId: viewer.id,
+      source: SOURCES.SYNC,
+      beforeState,
+      afterState: deepClone(project),
+      note: `模板"${template.name}" v${oldVersion} → v${newVersion}，同步字段：${fieldLabels.join("、") || "无"}`,
+      relatedId: template.id
+    });
+
+    await saveDb(db);
+    return sendJson(res, 200, {
+      success: true,
+      project,
+      syncedFields,
+      oldVersion,
+      newVersion
+    });
   }
 
   return false;

@@ -55,3 +55,64 @@ export function isSnapshotValid(snapshot) {
     && snapshot.materials
     && typeof snapshot.estimatedDays === "number";
 }
+
+export function compareTemplateWithSnapshot(template, snapshot) {
+  if (!template || !snapshot) return null;
+  if (snapshot.templateId !== template.id) return null;
+
+  const isNewer = template.version > (snapshot.templateVersion || 0);
+
+  const fieldDifferences = {
+    steps: {
+      changed: template.steps !== snapshot.steps,
+      oldValue: snapshot.steps,
+      newValue: template.steps
+    },
+    materials: {
+      changed: template.materials !== snapshot.materials,
+      oldValue: snapshot.materials,
+      newValue: template.materials
+    },
+    estimatedDays: {
+      changed: (template.estimatedDays || 0) !== (snapshot.estimatedDays || 0),
+      oldValue: snapshot.estimatedDays,
+      newValue: template.estimatedDays
+    },
+    reviewRequired: {
+      changed: (template.reviewRequired !== false) !== (snapshot.reviewRequired !== false),
+      oldValue: snapshot.reviewRequired,
+      newValue: template.reviewRequired
+    },
+    reviewNotes: {
+      changed: (template.reviewNotes || "") !== (snapshot.reviewNotes || ""),
+      oldValue: snapshot.reviewNotes,
+      newValue: template.reviewNotes
+    }
+  };
+
+  const changedFields = Object.keys(fieldDifferences).filter(key => fieldDifferences[key].changed);
+
+  return {
+    isNewer,
+    templateId: template.id,
+    templateName: template.name,
+    templateCategory: template.category,
+    snapshotVersion: snapshot.templateVersion || 0,
+    currentVersion: template.version,
+    appliedAt: snapshot.appliedAt,
+    fieldDifferences,
+    changedFields,
+    hasChanges: changedFields.length > 0
+  };
+}
+
+export function archiveSnapshot(snapshot, { syncedFrom = null, syncedAt = new Date().toISOString().slice(0, 10), operator = "", operatorId = "" } = {}) {
+  return {
+    ...snapshot,
+    _archived: true,
+    _syncedFrom: syncedFrom,
+    _syncedAt: syncedAt,
+    _syncedBy: operator,
+    _syncedById: operatorId
+  };
+}

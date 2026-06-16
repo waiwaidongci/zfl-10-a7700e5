@@ -6,7 +6,8 @@ const ACTION_TYPES = {
   STATUS_CHANGE: "status_change",
   REVIEW_PASS: "review_pass",
   REVIEW_REJECT: "review_reject",
-  ROLLBACK: "rollback"
+  ROLLBACK: "rollback",
+  TEMPLATE_SYNC: "template_sync"
 };
 
 const ACTION_LABELS = {
@@ -15,7 +16,8 @@ const ACTION_LABELS = {
   status_change: "状态变更",
   review_pass: "复核通过",
   review_reject: "复核退回",
-  rollback: "回滚操作"
+  rollback: "回滚操作",
+  template_sync: "同步模板更新"
 };
 
 const SOURCES = {

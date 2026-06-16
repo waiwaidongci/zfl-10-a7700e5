@@ -21,6 +21,7 @@ let templates = [];
 let expandedProjectId = null;
 let detailInstance = null;
 let templateSelector = null;
+let templateDiffModal = null;
 let filtersLoadedFromUrl = false;
 
 async function api(path, options) {
@@ -326,11 +327,15 @@ function initDetailView(projectId) {
   const p = projects.find((item) => item.id === projectId);
   if (!p) return;
 
+  const user = users.find((item) => item.id === viewer.value) || users[0];
+  const isAdmin = user.role === "admin";
+
   if (window.ProjectDetail) {
     detailInstance = new window.ProjectDetail(container, {
       project: p,
       users: users,
       editable: true,
+      isAdmin: isAdmin,
       onStatusChange: async (pid, newStatus) => {
         await api('/api/projects/' + pid, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
         await load();
@@ -343,6 +348,11 @@ function initDetailView(projectId) {
       },
       onOpenAudit: (project) => {
         if (project && window.AuditLog) window.AuditLog.open(project, users);
+      },
+      onOpenTemplateDiff: (project) => {
+        if (project && templateDiffModal) {
+          templateDiffModal.open(project.id);
+        }
       }
     });
   } else {
@@ -632,6 +642,22 @@ function initNetworkStatus() {
   window.SyncManager.onNetworkStatusChange(updateStatus);
 }
 
+function initTemplateDiffModal() {
+  if (!window.TemplateDiffModal) return;
+  const container = document.querySelector('#template-diff-container');
+  if (!container) return;
+
+  templateDiffModal = new window.TemplateDiffModal(container, {
+    onSyncSuccess: async (result) => {
+      await load();
+      if (expandedProjectId && result?.project?.id === expandedProjectId) {
+        initDetailView(expandedProjectId);
+      }
+    },
+    onClose: () => {}
+  });
+}
+
 function initSyncComponents() {
   if (!window.SyncPanel || !window.ConflictResolver) return;
 
@@ -679,4 +705,5 @@ function initSyncComponents() {
 
 initNetworkStatus();
 initSyncComponents();
+initTemplateDiffModal();
 load();

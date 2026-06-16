@@ -38,11 +38,13 @@
         project: null,
         users: [],
         editable: true,
+        isAdmin: false,
         onStatusChange: null,
         onOpenPhotos: null,
         onOpenTimeline: null,
         onOpenReview: null,
         onOpenAudit: null,
+        onOpenTemplateDiff: null,
         onClose: null
       }, options || {});
 
@@ -51,6 +53,7 @@
       this._galleryInstance = null;
       this._compareInstance = null;
       this._currentView = "compare";
+      this._templateStatus = null;
       this._init();
     }
 
@@ -79,6 +82,7 @@
       this.container.innerHTML = html;
       this._bindEvents();
       this._initPhotoComponents();
+      this._checkTemplateStatus();
     }
 
     _buildEmpty() {
@@ -229,9 +233,15 @@
 
     _buildTemplateSnapshotCard(snapshot) {
       if (!snapshot) return '';
+      const ts = this._templateStatus;
       let html = '<div class="pd-snapshot-head" style="margin-bottom:6px;">';
       html += '<span class="pd-snapshot-name">' + escapeHtml(snapshot.templateName || '未知模板') + '</span>';
       html += '<span class="pd-snapshot-version">v' + (snapshot.templateVersion || 1) + '</span>';
+      if (ts && ts.templateDeleted) {
+        html += '<span class="pd-snapshot-del-badge" title="关联模板已被删除">🗑️ 模板已删除</span>';
+      } else if (ts && ts.hasChanges) {
+        html += '<span class="pd-snapshot-update-badge" title="检测到模板有更新">🔔 模板已更新</span>';
+      }
       html += '</div>';
       html += '<div class="pd-snapshot-meta">';
       html += '<span>类型：' + escapeHtml(snapshot.templateCategory || '-') + '</span>';
@@ -246,8 +256,82 @@
       if (snapshot.reviewNotes) {
         html += '<div class="pd-snapshot-notes" style="margin-top:6px;padding-top:6px;border-top:1px dashed #e0dcd2;font-size:12px;color:#6b6258;"><b>复核要求：</b>' + escapeHtml(snapshot.reviewNotes) + '</div>';
       }
-      html += '<div class="pd-snapshot-hint" style="margin-top:8px;font-size:11px;color:#8a8278;font-style:italic;">* 此为项目创建时的模板快照，后续模板修改不影响本项目</div>';
+      if (ts && ts.hasChanges && !ts.templateDeleted) {
+        html += '<div class="pd-snapshot-upgrade-banner" id="pd-snapshot-upgrade">';
+        html += '<div class="pd-snapshot-upgrade-icon">✨</div>';
+        html += '<div class="pd-snapshot-upgrade-body">';
+        html += '<div class="pd-snapshot-upgrade-title">模板已更新至 v' + ts.currentVersion + '</div>';
+        html += '<div class="pd-snapshot-upgrade-meta">共 ' + (ts.changedFields ? ts.changedFields.length : (ts.changedCount || '若干')) + ' 处差异</div>';
+        html += '</div>';
+        if (this.options.isAdmin && typeof this.options.onOpenTemplateDiff === "function") {
+          html += '<button class="pd-snapshot-upgrade-btn" data-action="template-diff">查看差异 →</button>';
+        } else if (!this.options.isAdmin) {
+          html += '<span class="pd-snapshot-upgrade-hint">联系管理员同步</span>';
+        }
+        html += '</div>';
+      }
+      if (!ts || (!ts.hasChanges && !ts.templateDeleted)) {
+        html += '<div class="pd-snapshot-hint" style="margin-top:8px;font-size:11px;color:#8a8278;font-style:italic;">* 此为项目创建时的模板快照，可在模板更新后与最新版本同步</div>';
+      }
       return this._buildHtmlInfoCard("应用模板", html, "📋");
+    }
+
+    async _checkTemplateStatus() {
+      const p = this.project;
+      if (!p || !p.templateSnapshot || !p.templateSnapshot.templateId || !p.id) return;
+
+      try {
+        const viewer = document.querySelector("#viewer");
+        const headers = { "Content-Type": "application/json" };
+        if (viewer && viewer.value) headers["X-Viewer-Id"] = viewer.value;
+
+        const res = await fetch("/api/projects/" + encodeURIComponent(p.id) + "/template-status", { headers });
+        const data = await res.json();
+        if (data && !data.error) {
+          this._templateStatus = data;
+          this._refreshSnapshotCard();
+        }
+      } catch (e) {
+        // 静默失败
+      }
+    }
+
+    _refreshSnapshotCard() {
+      const cardContainer = this.container.querySelector(".pd-info-card");
+      if (!this.project || !this.project.templateSnapshot || !cardContainer) return;
+
+      const allCards = this.container.querySelectorAll(".pd-info-card");
+      let targetCard = null;
+      allCards.forEach(function(c) {
+        const labelEl = c.querySelector(".pd-info-label");
+        if (labelEl && labelEl.textContent && labelEl.textContent.indexOf("应用模板") > -1) {
+          targetCard = c;
+        }
+      });
+      if (!targetCard) return;
+
+      const valueEl = targetCard.querySelector(".pd-info-value");
+      if (valueEl) {
+        const newContent = this._buildTemplateSnapshotCard(this.project.templateSnapshot);
+        const temp = document.createElement("div");
+        temp.innerHTML = newContent;
+        const newValueEl = temp.querySelector(".pd-info-value");
+        if (newValueEl) {
+          valueEl.innerHTML = newValueEl.innerHTML;
+          this._bindSnapshotEvents(valueEl);
+        }
+      }
+    }
+
+    _bindSnapshotEvents(scope) {
+      const self = this;
+      scope = scope || this.container;
+      const diffBtn = scope.querySelector('[data-action="template-diff"]');
+      if (diffBtn && typeof this.options.onOpenTemplateDiff === "function") {
+        diffBtn.onclick = function() {
+          self.options.onOpenTemplateDiff(self.project);
+        };
+      }
     }
 
     _buildTimelineItem(record) {
@@ -308,6 +392,8 @@
           self.options.onOpenAudit(self.project);
         };
       }
+
+      this._bindSnapshotEvents();
     }
 
     _initPhotoComponents() {

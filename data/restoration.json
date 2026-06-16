@@ -95,9 +95,25 @@
     {
       "id": "R-1781488677239",
       "status": "进行中",
-      "updatedAt": "2026-06-15",
+      "updatedAt": "2026-06-16",
       "reviewRecords": [],
-      "timelineRecords": [],
+      "timelineRecords": [
+        {
+          "id": "T-1781611533256-xb1gf8",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-16",
+          "steps": "模板版本升级：v1 → v2",
+          "materials": "",
+          "notes": "同步字段：预计工期、复核要求",
+          "photoUrl": "",
+          "systemMessage": "模板\"古籍散页修复流程\"从 v1 同步更新至 v2（同步：预计工期、复核要求）",
+          "materialUsages": [],
+          "createdAt": "2026-06-16T12:05:33.256Z",
+          "version": 1
+        }
+      ],
       "photoArchive": {
         "before": [],
         "during": [],
@@ -107,13 +123,17 @@
         "templateId": "TPL-001",
         "templateName": "古籍散页修复流程",
         "templateCategory": "古籍散页",
-        "templateVersion": 1,
+        "templateVersion": 2,
         "steps": "1. 检查散页数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
         "materials": "楮皮纸、小麦淀粉浆",
-        "estimatedDays": 7,
+        "estimatedDays": 10,
         "reviewRequired": true,
-        "reviewNotes": "需检验补纸边缘贴合度及页面平整度",
-        "appliedAt": "2026-06-15"
+        "reviewNotes": "更新后的复核要求",
+        "appliedAt": "2026-06-16",
+        "syncedFields": {
+          "estimatedDays": true,
+          "reviewNotes": true
+        }
       },
       "title": "宋代帛书残片",
       "era": "宋代",
@@ -121,8 +141,27 @@
       "owner": "顾眉",
       "steps": "1. 检查散页数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
       "materials": "楮皮纸、小麦淀粉浆",
-      "dueDate": "2026-06-22",
-      "version": 1
+      "dueDate": "2026-06-25",
+      "version": 2,
+      "templateSnapshotHistory": [
+        {
+          "templateId": "TPL-001",
+          "templateName": "古籍散页修复流程",
+          "templateCategory": "古籍散页",
+          "templateVersion": 1,
+          "steps": "1. 检查散页数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
+          "materials": "楮皮纸、小麦淀粉浆",
+          "estimatedDays": 7,
+          "reviewRequired": true,
+          "reviewNotes": "需检验补纸边缘贴合度及页面平整度",
+          "appliedAt": "2026-06-15",
+          "_archived": true,
+          "_syncedFrom": 1,
+          "_syncedAt": "2026-06-16",
+          "_syncedBy": "管理员",
+          "_syncedById": "u-admin"
+        }
+      ]
     },
     {
       "id": "R-1781435967630",
@@ -343,9 +382,9 @@
       "steps": "1. 检查残卷数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
       "materials": "楮皮纸、小麦淀粉浆、脱酸剂",
       "owner": "顾眉",
-      "dueDate": "2026-06-10",
+      "dueDate": "2026-06-13",
       "status": "待复核",
-      "updatedAt": "2026-06-14",
+      "updatedAt": "2026-06-16",
       "reviewRecords": [
         {
           "reviewer": "管理员",
@@ -418,6 +457,21 @@
           "createdAt": "2026-06-14T16:30:00.000Z",
           "version": 1,
           "materialUsages": []
+        },
+        {
+          "id": "T-1781612398324-9evee1",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-16",
+          "steps": "模板版本升级：v1 → v2",
+          "materials": "",
+          "notes": "同步字段：预计工期、复核要求",
+          "photoUrl": "",
+          "systemMessage": "模板\"古籍散页修复流程\"从 v1 同步更新至 v2（同步：预计工期、复核要求）",
+          "materialUsages": [],
+          "createdAt": "2026-06-16T12:19:58.324Z",
+          "version": 1
         }
       ],
       "photoArchive": {
@@ -437,15 +491,38 @@
         "templateId": "TPL-001",
         "templateName": "古籍散页修复流程",
         "templateCategory": "古籍散页",
-        "templateVersion": 1,
+        "templateVersion": 2,
         "steps": "1. 检查散页数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
         "materials": "楮皮纸、小麦淀粉浆",
-        "estimatedDays": 7,
+        "estimatedDays": 10,
         "reviewRequired": true,
-        "reviewNotes": "需检验补纸边缘贴合度、页面平整度及清洁度。补纸纹理需与原纸保持一致，粘合处不能有明显缝隙。",
-        "appliedAt": "2026-06-07"
+        "reviewNotes": "更新后的复核要求",
+        "appliedAt": "2026-06-16",
+        "syncedFields": {
+          "estimatedDays": true,
+          "reviewNotes": true
+        }
       },
-      "version": 3
+      "version": 4,
+      "templateSnapshotHistory": [
+        {
+          "templateId": "TPL-001",
+          "templateName": "古籍散页修复流程",
+          "templateCategory": "古籍散页",
+          "templateVersion": 1,
+          "steps": "1. 检查散页数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
+          "materials": "楮皮纸、小麦淀粉浆",
+          "estimatedDays": 7,
+          "reviewRequired": true,
+          "reviewNotes": "需检验补纸边缘贴合度、页面平整度及清洁度。补纸纹理需与原纸保持一致，粘合处不能有明显缝隙。",
+          "appliedAt": "2026-06-07",
+          "_archived": true,
+          "_syncedFrom": 1,
+          "_syncedAt": "2026-06-16",
+          "_syncedBy": "管理员",
+          "_syncedById": "u-admin"
+        }
+      ]
     },
     {
       "id": "R-TEST-002",
@@ -660,14 +737,14 @@
       "id": "TPL-002",
       "name": "线装书修复流程",
       "category": "线装书",
-      "version": 1,
+      "version": 2,
       "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
       "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
-      "estimatedDays": 10,
+      "estimatedDays": 12,
       "reviewRequired": true,
-      "reviewNotes": "需检验装订牢固度、封面托裱质量及整体平整度",
+      "reviewNotes": "线装书修复后的复核要点：装订质量、书脊加固、封面托裱平整度、穿线牢固度",
       "createdAt": "2026-06-14",
-      "updatedAt": "2026-06-14"
+      "updatedAt": "2026-06-16"
     },
     {
       "id": "TPL-003",
@@ -684,6 +761,21 @@
     }
   ],
   "templateVersions": [
+    {
+      "id": "TV-1781611681513-ihzi2s",
+      "templateId": "TPL-002",
+      "version": 2,
+      "name": "线装书修复流程",
+      "category": "线装书",
+      "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+      "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+      "estimatedDays": 12,
+      "reviewRequired": true,
+      "reviewNotes": "线装书修复后的复核要点：装订质量、书脊加固、封面托裱平整度、穿线牢固度",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "createdAt": "2026-06-16"
+    },
     {
       "id": "TV-1781488694610-szi6ja",
       "templateId": "TPL-001",
@@ -790,6 +882,90 @@
     ]
   },
   "auditLogs": [
+    {
+      "id": "AUD-1781612398325-rzl5to",
+      "projectId": "R-TEST-001",
+      "actionType": "template_sync",
+      "actionLabel": "同步模板更新",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "sync",
+      "timestamp": "2026-06-16T12:19:58.325Z",
+      "beforeState": {
+        "title": "宋代佛经残卷（测试）",
+        "era": "宋代",
+        "damage": "虫蛀严重、部分字迹模糊、边缘破损",
+        "steps": "1. 检查残卷数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
+        "materials": "楮皮纸、小麦淀粉浆、脱酸剂",
+        "owner": "顾眉",
+        "dueDate": "2026-06-10",
+        "status": "待复核"
+      },
+      "afterState": {
+        "title": "宋代佛经残卷（测试）",
+        "era": "宋代",
+        "damage": "虫蛀严重、部分字迹模糊、边缘破损",
+        "steps": "1. 检查残卷数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
+        "materials": "楮皮纸、小麦淀粉浆、脱酸剂",
+        "owner": "顾眉",
+        "dueDate": "2026-06-13",
+        "status": "待复核"
+      },
+      "changes": [
+        {
+          "field": "dueDate",
+          "label": "预计完成日期",
+          "oldValue": "2026-06-10",
+          "newValue": "2026-06-13",
+          "type": "modify"
+        }
+      ],
+      "summary": "预计完成日期：2026-06-10 → 2026-06-13",
+      "note": "模板\"古籍散页修复流程\" v1 → v2，同步字段：预计工期、复核要求",
+      "relatedId": "TPL-001"
+    },
+    {
+      "id": "AUD-1781611533256-i8w92t",
+      "projectId": "R-1781488677239",
+      "actionType": "template_sync",
+      "actionLabel": "同步模板更新",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "sync",
+      "timestamp": "2026-06-16T12:05:33.256Z",
+      "beforeState": {
+        "title": "宋代帛书残片",
+        "era": "宋代",
+        "damage": "破损、霉斑",
+        "steps": "1. 检查散页数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
+        "materials": "楮皮纸、小麦淀粉浆",
+        "owner": "顾眉",
+        "dueDate": "2026-06-22",
+        "status": "进行中"
+      },
+      "afterState": {
+        "title": "宋代帛书残片",
+        "era": "宋代",
+        "damage": "破损、霉斑",
+        "steps": "1. 检查散页数量及破损情况，拍照存档\n2. 使用软毛刷清理表面灰尘与污渍\n3. 对虫蛀、缺口处使用楮皮纸补缀\n4. 使用小麦淀粉浆粘合补纸\n5. 压平定型，干燥处理\n6. 检查补纸边缘贴合度，修整",
+        "materials": "楮皮纸、小麦淀粉浆",
+        "owner": "顾眉",
+        "dueDate": "2026-06-25",
+        "status": "进行中"
+      },
+      "changes": [
+        {
+          "field": "dueDate",
+          "label": "预计完成日期",
+          "oldValue": "2026-06-22",
+          "newValue": "2026-06-25",
+          "type": "modify"
+        }
+      ],
+      "summary": "预计完成日期：2026-06-22 → 2026-06-25",
+      "note": "模板\"古籍散页修复流程\" v1 → v2，同步字段：预计工期、复核要求",
+      "relatedId": "TPL-001"
+    },
     {
       "id": "AUD-1781510238618-ql2bei",
       "projectId": "R-1781510238618",
