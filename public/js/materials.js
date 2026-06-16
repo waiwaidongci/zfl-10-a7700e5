@@ -1,9 +1,16 @@
 const form = document.querySelector("#form");
 const materialsEl = document.querySelector("#materials");
 const statsEl = document.querySelector("#stats");
+const movementsEl = document.querySelector("#movements");
+const movementPaginationEl = document.querySelector("#movement-pagination");
+const movementTypeFilter = document.querySelector("#movement-type-filter");
+const movementMaterialFilter = document.querySelector("#movement-material-filter");
 
 let materials = [];
 let editingId = null;
+let allMovements = [];
+let movementPage = 1;
+const movementPageSize = 10;
 
 function escapeHtml(s) {
   return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -111,6 +118,98 @@ function cancelEdit() {
 async function load() {
   materials = await api("/api/materials");
   render();
+  renderMaterialFilter();
+  await loadMovements();
+}
+
+async function loadMovements() {
+  try {
+    allMovements = await api("/api/materials/movements");
+  } catch {
+    allMovements = [];
+  }
+  movementPage = 1;
+  renderMovements();
+}
+
+function renderMaterialFilter() {
+  const uniqueNames = [...new Set(materials.map(m => m.name))];
+  movementMaterialFilter.innerHTML =
+    '<option value="">全部材料</option>' +
+    uniqueNames.map(n => '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>').join('');
+}
+
+function getFilteredMovements() {
+  let filtered = allMovements;
+  const typeVal = movementTypeFilter ? movementTypeFilter.value : '';
+  const matVal = movementMaterialFilter ? movementMaterialFilter.value : '';
+  if (typeVal) {
+    filtered = filtered.filter(m => m.type === typeVal);
+  }
+  if (matVal) {
+    filtered = filtered.filter(m => m.materialName === matVal);
+  }
+  return filtered;
+}
+
+function formatMovementType(type) {
+  const map = { consume: '消耗', restore: '恢复', restock: '入库' };
+  return map[type] || type;
+}
+
+function formatMovementTime(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderMovements() {
+  if (!movementsEl) return;
+  const filtered = getFilteredMovements();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / movementPageSize));
+  if (movementPage > totalPages) movementPage = totalPages;
+  const start = (movementPage - 1) * movementPageSize;
+  const pageItems = filtered.slice(start, start + movementPageSize);
+
+  if (filtered.length === 0) {
+    movementsEl.innerHTML = '<div class="movement-empty">暂无库存变动记录</div>';
+    movementPaginationEl.innerHTML = '';
+    return;
+  }
+
+  movementsEl.innerHTML = pageItems.map(m => {
+    const sign = m.type === 'consume' ? '-' : '+';
+    const detail = sign + m.quantity + ' ' + escapeHtml(m.unit || '');
+    return (
+      '<div class="movement-item">' +
+        '<span class="movement-type ' + escapeHtml(m.type) + '">' + formatMovementType(m.type) + '</span>' +
+        '<span class="movement-material">' + escapeHtml(m.materialName || '') + '</span>' +
+        '<span class="movement-detail">' + detail + '</span>' +
+        '<span class="movement-balance">余额：' + m.balanceAfter + ' ' + escapeHtml(m.unit || '') + '</span>' +
+        '<span class="movement-note" title="' + escapeHtml(m.note || '') + '">' + escapeHtml(m.note || '') + '</span>' +
+        '<span class="movement-time">' + formatMovementTime(m.createdAt) + '</span>' +
+      '</div>'
+    );
+  }).join('');
+
+  if (totalPages <= 1) {
+    movementPaginationEl.innerHTML = '';
+    return;
+  }
+  let paginationHtml = '';
+  if (movementPage > 1) {
+    paginationHtml += '<button class="secondary" id="mov-prev">上一页</button>';
+  }
+  paginationHtml += '<span style="font-size:12px;color:#8a8278;align-self:center;">' + movementPage + ' / ' + totalPages + '</span>';
+  if (movementPage < totalPages) {
+    paginationHtml += '<button class="secondary" id="mov-next">下一页</button>';
+  }
+  movementPaginationEl.innerHTML = paginationHtml;
+
+  const prevBtn = document.getElementById('mov-prev');
+  const nextBtn = document.getElementById('mov-next');
+  if (prevBtn) prevBtn.onclick = () => { movementPage--; renderMovements(); };
+  if (nextBtn) nextBtn.onclick = () => { movementPage++; renderMovements(); };
 }
 
 form.onsubmit = async (event) => {
@@ -133,5 +232,12 @@ form.onsubmit = async (event) => {
 
   await load();
 };
+
+if (movementTypeFilter) {
+  movementTypeFilter.onchange = () => { movementPage = 1; renderMovements(); };
+}
+if (movementMaterialFilter) {
+  movementMaterialFilter.onchange = () => { movementPage = 1; renderMovements(); };
+}
 
 load();

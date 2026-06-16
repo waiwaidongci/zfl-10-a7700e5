@@ -1,6 +1,8 @@
 let currentProjectId = null;
 let currentRecords = [];
 let currentUser = null;
+let availableMaterials = [];
+let selectedMaterialUsages = [];
 
 function api(path, options) {
   if (window.SyncManager) {
@@ -27,6 +29,12 @@ window.Timeline = {
     } catch {
       currentRecords = [];
     }
+    try {
+      availableMaterials = await api('/api/materials');
+    } catch {
+      availableMaterials = [];
+    }
+    selectedMaterialUsages = [];
     showModal(project, users);
   },
 
@@ -73,6 +81,20 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function isAdmin() {
+  const viewerEl = document.querySelector('#viewer');
+  const viewerId = viewerEl ? viewerEl.value : '';
+  const usersEl = document.querySelector('#users-data');
+  if (!usersEl) return false;
+  try {
+    const users = JSON.parse(usersEl.textContent || '[]');
+    const viewer = users.find(u => u.id === viewerId);
+    return viewer && viewer.role === 'admin';
+  } catch {
+    return false;
+  }
+}
+
 function showModal(project, users) {
   closeModal();
   const modal = document.createElement('div');
@@ -113,6 +135,7 @@ function toggleForm(users) {
   if (wrap.style.display === 'none') {
     wrap.style.display = 'block';
     btn.style.display = 'none';
+    selectedMaterialUsages = [];
     renderForm(users);
   } else {
     wrap.style.display = 'none';
@@ -135,7 +158,20 @@ function renderForm(users) {
       '<input id="tf-date" type="date" value="' + new Date().toISOString().slice(0, 10) + '">' +
       '<label>处理步骤</label>' +
       '<textarea id="tf-steps" placeholder="如：拆线、干洗、补纸、压平"></textarea>' +
-      '<label>使用材料</label>' +
+      '<label>材料消耗登记</label>' +
+      '<div id="tf-materials-section">' +
+        '<div id="tf-materials-list"></div>' +
+        '<div class="tf-add-material-wrap">' +
+          '<select id="tf-material-select">' +
+            '<option value="">-- 选择材料 --</option>' +
+            availableMaterials.map(m => 
+              '<option value="' + escapeHtml(m.id) + '">' + escapeHtml(m.name) + '（库存：' + m.quantity + ' ' + escapeHtml(m.unit) + '）</option>'
+            ).join('') +
+          '</select>' +
+          '<button type="button" id="tf-add-material" class="secondary">添加</button>' +
+        '</div>' +
+      '</div>' +
+      '<label>使用材料（文字描述，选填）</label>' +
       '<textarea id="tf-materials" placeholder="如：楮皮纸、小麦淀粉浆（选填）"></textarea>' +
       '<label>备注</label>' +
       '<textarea id="tf-notes" placeholder="补充说明（选填）"></textarea>' +
@@ -152,7 +188,82 @@ function renderForm(users) {
     document.getElementById('timeline-add-btn').style.display = 'inline-block';
   };
   document.getElementById('tf-submit').onclick = submitRecord;
+  document.getElementById('tf-add-material').onclick = addMaterialUsage;
+  renderMaterialUsagesList();
 }
+
+function addMaterialUsage() {
+  const select = document.getElementById('tf-material-select');
+  const materialId = select.value;
+  if (!materialId) {
+    showAlert('请选择材料', true);
+    return;
+  }
+  if (selectedMaterialUsages.some(u => u.materialId === materialId)) {
+    showAlert('该材料已添加', true);
+    return;
+  }
+  const material = availableMaterials.find(m => m.id === materialId);
+  if (!material) return;
+
+  selectedMaterialUsages.push({
+    materialId: material.id,
+    materialName: material.name,
+    unit: material.unit,
+    quantity: 1,
+    available: material.quantity
+  });
+
+  select.value = '';
+  renderMaterialUsagesList();
+}
+
+function removeMaterialUsage(materialId) {
+  selectedMaterialUsages = selectedMaterialUsages.filter(u => u.materialId !== materialId);
+  renderMaterialUsagesList();
+}
+
+function updateMaterialQuantity(materialId, value) {
+  const usage = selectedMaterialUsages.find(u => u.materialId === materialId);
+  if (usage) {
+    usage.quantity = Number(value) || 0;
+  }
+}
+
+function renderMaterialUsagesList() {
+  const listEl = document.getElementById('tf-materials-list');
+  if (!listEl) return;
+
+  if (selectedMaterialUsages.length === 0) {
+    listEl.innerHTML = '<div class="tf-materials-empty">暂未选择材料，可从下方选择库存材料并填写消耗数量</div>';
+    return;
+  }
+
+  listEl.innerHTML = selectedMaterialUsages.map(u => {
+    const material = availableMaterials.find(m => m.id === u.materialId);
+    const stock = material ? material.quantity : u.available;
+    const isLow = stock < u.quantity;
+    return (
+      '<div class="tf-material-row">' +
+        '<span class="tf-material-name">' + escapeHtml(u.materialName) + '</span>' +
+        '<input type="number" min="0" step="0.01" value="' + u.quantity + '" ' +
+          'onchange="window.__tfUpdateQty(\'' + u.materialId + '\', this.value)" ' +
+          'class="tf-material-qty" placeholder="数量">' +
+        '<span class="tf-material-unit">' + escapeHtml(u.unit) + '</span>' +
+        '<span class="tf-material-stock' + (isLow ? ' low' : '') + '">（库存：' + stock + '）</span>' +
+        '<button type="button" class="tf-material-remove danger" onclick="window.__tfRemoveMat(\'' + u.materialId + '\')">×</button>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+window.__tfUpdateQty = function(materialId, value) {
+  updateMaterialQuantity(materialId, value);
+};
+
+window.__tfRemoveMat = function(materialId) {
+  removeMaterialUsage(materialId);
+};
 
 function showAlert(message, isError) {
   const el = document.getElementById('timeline-alert');
@@ -166,13 +277,18 @@ function showAlert(message, isError) {
 }
 
 async function submitRecord() {
+  const materialUsages = selectedMaterialUsages
+    .filter(u => u.quantity > 0)
+    .map(u => ({ materialId: u.materialId, quantity: Number(u.quantity) }));
+
   const payload = {
     operator: document.getElementById('tf-operator').value,
     date: document.getElementById('tf-date').value,
     steps: document.getElementById('tf-steps').value,
     materials: document.getElementById('tf-materials').value,
     notes: document.getElementById('tf-notes').value,
-    photoUrl: document.getElementById('tf-photo').value
+    photoUrl: document.getElementById('tf-photo').value,
+    materialUsages: materialUsages
   };
 
   const submitBtn = document.getElementById('tf-submit');
@@ -208,14 +324,22 @@ async function submitRecord() {
 
     if (res.error) {
       let msg = res.message || '操作失败';
-      if (res.errors && res.errors.length) {
+      if (res.error === 'insufficient_stock' && res.shortages && res.shortages.length) {
+        const shortageMsgs = res.shortages.map(s => 
+          `${s.materialName}：需要 ${s.required}${s.unit}，库存仅 ${s.available}${s.unit}，缺口 ${s.shortage}${s.unit}`
+        );
+        msg += '：' + shortageMsgs.join('；');
+      } else if (res.errors && res.errors.length) {
         msg += '：' + res.errors.map(e => e.message).join('；');
       }
       showAlert(msg, true);
       return;
     }
 
-    showAlert('记录已添加', false);
+    showAlert('记录已添加，材料库存已自动扣减', false);
+    try {
+      availableMaterials = await api('/api/materials');
+    } catch {}
     currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
     currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
     document.getElementById('timeline-form-wrap').style.display = 'none';
@@ -233,6 +357,49 @@ async function submitRecord() {
   }
 }
 
+async function deleteRecord(recordId) {
+  if (!confirm('确定要删除这条过程记录吗？相关材料库存将自动恢复。')) {
+    return;
+  }
+
+  try {
+    const res = await api('/api/projects/' + currentProjectId + '/timeline/' + recordId, {
+      method: 'DELETE'
+    });
+
+    if (res.error) {
+      showAlert(res.message || '删除失败', true);
+      return;
+    }
+
+    showAlert('记录已删除，材料库存已恢复', false);
+    try {
+      availableMaterials = await api('/api/materials');
+    } catch {}
+    currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
+    currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
+    renderList();
+
+    if (typeof window.onTimelineUpdated === 'function') {
+      window.onTimelineUpdated(currentProjectId, currentRecords);
+    }
+  } catch (error) {
+    showAlert(error.message || '删除失败', true);
+  }
+}
+
+function formatMaterialUsagesDisplay(record) {
+  if (!record.materialUsages || !Array.isArray(record.materialUsages) || record.materialUsages.length === 0) {
+    return '';
+  }
+  const parts = record.materialUsages.map(u => {
+    const name = u.materialName || u.materialId;
+    const unit = u.unit || '';
+    return `${name} ${u.quantity}${unit}`;
+  });
+  return '<div class="timeline-item-row"><span class="tl-label">消耗材料</span><span class="tl-material-usage">' + escapeHtml(parts.join('、')) + '</span></div>';
+}
+
 function renderList() {
   const list = document.getElementById('timeline-list');
   if (!currentRecords || currentRecords.length === 0) {
@@ -240,6 +407,7 @@ function renderList() {
     return;
   }
 
+  const admin = isAdmin();
   const sorted = [...currentRecords].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   list.innerHTML = sorted.map((r, idx) => {
     const isSystem = r.type === "system";
@@ -257,9 +425,11 @@ function renderList() {
               : '<span class="timeline-badge manual">人工</span> <b>' + escapeHtml(r.operator) + '</b>') +
             (isDraft ? '<span class="timeline-badge draft">本地草稿</span>' : '') +
             '<span class="timeline-item-date">' + escapeHtml(r.date) + '</span>' +
+            (admin && !isSystem && !isDraft ? '<button class="timeline-delete-btn danger" data-delete="' + escapeHtml(r.id) + '">删除</button>' : '') +
           '</div>' +
           (isSystem ? '' :
             '<div class="timeline-item-row"><span class="tl-label">处理步骤</span><span>' + escapeHtml(r.steps) + '</span></div>' +
+            formatMaterialUsagesDisplay(r) +
             (r.materials ? '<div class="timeline-item-row"><span class="tl-label">使用材料</span><span>' + escapeHtml(r.materials) + '</span></div>' : '') +
             (r.notes ? '<div class="timeline-item-row"><span class="tl-label">备注</span><span>' + escapeHtml(r.notes) + '</span></div>' : '') +
             (r.photoUrl ? '<div class="timeline-item-row"><span class="tl-label">照片</span><a href="' + escapeHtml(r.photoUrl) + '" target="_blank" rel="noopener">查看照片 →</a></div>' : '')
@@ -268,4 +438,8 @@ function renderList() {
       '</div>'
     );
   }).join('');
+
+  list.querySelectorAll('button[data-delete]').forEach(btn => {
+    btn.onclick = () => deleteRecord(btn.dataset.delete);
+  });
 }

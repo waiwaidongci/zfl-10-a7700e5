@@ -24,6 +24,11 @@ export async function handleMaterials(req, res, db, pathname) {
     return sendJson(res, 200, db.materials);
   }
 
+  if (req.method === "GET" && pathname === "/api/materials/movements") {
+    const movements = db.materialMovements || [];
+    return sendJson(res, 200, movements);
+  }
+
   if (req.method === "POST" && pathname === "/api/materials") {
     const input = await parseBody(req);
     const errors = validateMaterial(input);
@@ -58,13 +63,36 @@ export async function handleMaterials(req, res, db, pathname) {
       if (errors.length > 0) {
         return sendJson(res, 400, { error: "validation_failed", errors });
       }
+      const oldQuantity = material.quantity;
+      const newQuantity = input.quantity !== undefined ? Number(input.quantity) : material.quantity;
       Object.assign(material, input, {
         name: input.name ? input.name.trim() : material.name,
         unit: input.unit ? input.unit.trim() : material.unit,
-        quantity: input.quantity !== undefined ? Number(input.quantity) : material.quantity,
+        quantity: newQuantity,
         lowStockThreshold: input.lowStockThreshold !== undefined ? Number(input.lowStockThreshold) : material.lowStockThreshold,
         updatedAt: new Date().toISOString().slice(0, 10)
       });
+      if (newQuantity !== oldQuantity) {
+        const diff = newQuantity - oldQuantity;
+        const movement = {
+          id: `MM-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          materialId: material.id,
+          materialName: material.name,
+          unit: material.unit,
+          type: diff > 0 ? "restock" : "consume",
+          quantity: Math.abs(diff),
+          balanceAfter: newQuantity,
+          referenceType: "manual_edit",
+          referenceId: material.id,
+          projectId: null,
+          operator: "",
+          operatorId: "",
+          note: diff > 0 ? `手动入库 +${Math.abs(diff)}${material.unit}` : `手动调整 -${Math.abs(diff)}${material.unit}`,
+          createdAt: new Date().toISOString()
+        };
+        if (!db.materialMovements) db.materialMovements = [];
+        db.materialMovements.unshift(movement);
+      }
       await saveDb(db);
       return sendJson(res, 200, material);
     }

@@ -3,6 +3,7 @@ import { createTimelineRecord, validateTimelineRecord, sortRecords } from "../ut
 import { incrementVersion } from "../utils/sync.js";
 import { deepClone } from "../utils/diff.js";
 import { getViewer, filterProjectsByPermission } from "../utils/permissions.js";
+import { validateMaterialUsages, checkStockSufficiency, consumeMaterials, restoreMaterials, formatMaterialUsagesText } from "../utils/materials.js";
 
 export async function handleTimeline(req, res, db, pathname) {
   const listMatch = pathname.match(/^\/api\/projects\/([^/]+)\/timeline$/);
@@ -50,9 +51,28 @@ export async function handleTimeline(req, res, db, pathname) {
     }
 
     const errors = validateTimelineRecord(input);
+    const materialErrors = validateMaterialUsages(input.materialUsages, db);
+    errors.push(...materialErrors);
     if (errors.length > 0) {
       return sendJson(res, 400, { error: "validation_failed", message: "输入校验失败", errors });
     }
+
+    const shortages = checkStockSufficiency(input.materialUsages, db);
+    if (shortages.length > 0) {
+      return sendJson(res, 400, {
+        error: "insufficient_stock",
+        message: "材料库存不足",
+        shortages: shortages
+      });
+    }
+
+    const materialUsagesText = formatMaterialUsagesText(input.materialUsages, db);
+    const materialsField = (input.materials || "").trim();
+    const finalMaterials = materialsField && !materialUsagesText
+      ? materialsField
+      : materialUsagesText
+        ? (materialsField ? materialsField + "；" + materialUsagesText : materialUsagesText)
+        : "";
 
     const record = createTimelineRecord({
       type: "manual",
@@ -60,10 +80,20 @@ export async function handleTimeline(req, res, db, pathname) {
       operatorId: viewer.id,
       date: input.date.trim(),
       steps: input.steps.trim(),
-      materials: (input.materials || "").trim(),
+      materials: finalMaterials,
       notes: (input.notes || "").trim(),
-      photoUrl: (input.photoUrl || "").trim()
+      photoUrl: (input.photoUrl || "").trim(),
+      materialUsages: input.materialUsages || []
     });
+
+    consumeMaterials(
+      input.materialUsages,
+      db,
+      project.id,
+      record.id,
+      input.operator.trim(),
+      viewer.id
+    );
 
     if (!project.timelineRecords) project.timelineRecords = [];
     project.timelineRecords.push(record);
@@ -87,10 +117,13 @@ export async function handleTimeline(req, res, db, pathname) {
     if (idx === -1) return sendJson(res, 404, { error: "record_not_found", message: "记录不存在" });
 
     const [removed] = project.timelineRecords.splice(idx, 1);
+
+    const restoredMovements = restoreMaterials(removed, db);
+
     project.updatedAt = new Date().toISOString().slice(0, 10);
 
     await saveDb(db);
-    return sendJson(res, 200, { removed });
+    return sendJson(res, 200, { removed, restoredMovements });
   }
 
   return false;

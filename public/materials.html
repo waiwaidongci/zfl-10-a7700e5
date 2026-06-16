@@ -34,6 +34,22 @@
       <div class="stats" id="stats"></div>
       <div class="grid" id="materials"></div>
     </section>
+    <section class="movements-section">
+      <h2>库存变动记录</h2>
+      <div class="movements-filter">
+        <select id="movement-type-filter">
+          <option value="">全部类型</option>
+          <option value="consume">消耗</option>
+          <option value="restore">恢复</option>
+          <option value="restock">入库</option>
+        </select>
+        <select id="movement-material-filter">
+          <option value="">全部材料</option>
+        </select>
+      </div>
+      <div class="movement-list" id="movements"></div>
+      <div class="movement-pagination" id="movement-pagination"></div>
+    </section>
   </main>
   <script src="/js/materials.js"></script>
 </body>

@@ -66,6 +66,8 @@ function validateDbStructure(db) {
     errors.push("offlineDrafts 字段缺失或不是数组");
   if (!Array.isArray(db.syncQueue))
     errors.push("syncQueue 字段缺失或不是数组");
+  if (!Array.isArray(db.materialMovements))
+    errors.push("materialMovements 字段缺失或不是数组");
   return errors;
 }
 
@@ -91,6 +93,7 @@ const seed = {
     { id: "M-003", name: "小麦淀粉浆", unit: "克", quantity: 2000, lowStockThreshold: 500, updatedAt: "2026-06-09" },
     { id: "M-004", name: "棉线", unit: "米", quantity: 150, lowStockThreshold: 30, updatedAt: "2026-06-12" }
   ],
+  materialMovements: [],
   templates: [
     {
       id: "TPL-001",
@@ -186,7 +189,7 @@ export async function loadDb() {
 
   let changed = false;
 
-  const requiredCollections = ["users", "projects", "intakes", "materials", "offlineDrafts", "syncQueue"];
+  const requiredCollections = ["users", "projects", "intakes", "materials", "materialMovements", "offlineDrafts", "syncQueue"];
   for (const key of requiredCollections) {
     if (!(key in db) || !Array.isArray(db[key])) {
       if (db[key] === undefined || db[key] === null) {
@@ -246,6 +249,10 @@ export async function loadDb() {
             record.version = 1;
             changed = true;
           }
+          if (record.materialUsages === undefined) {
+            record.materialUsages = [];
+            changed = true;
+          }
         }
       }
     }
@@ -280,7 +287,7 @@ export async function saveDb(db) {
       const existingData = await readFile(dbPath, "utf8");
       const existingDb = JSON.parse(existingData);
 
-      const protectCollections = ["projects", "templates", "users", "intakes", "materials", "auditLogs", "offlineDrafts", "syncQueue"];
+      const protectCollections = ["projects", "templates", "users", "intakes", "materials", "materialMovements", "auditLogs", "offlineDrafts", "syncQueue"];
       for (const col of protectCollections) {
         const oldLen = Array.isArray(existingDb[col]) ? existingDb[col].length : 0;
         const newLen = Array.isArray(db[col]) ? db[col].length : 0;

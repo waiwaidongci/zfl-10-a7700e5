@@ -21,7 +21,7 @@
       "id": "R-1781510238618",
       "status": "进行中",
       "updatedAt": "2026-06-15",
-      "version": 1,
+      "version": 2,
       "reviewRecords": [],
       "timelineRecords": [],
       "photoArchive": {
@@ -167,7 +167,7 @@
       "dueDate": "2026-06-22",
       "status": "待复核",
       "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      "updatedAt": "2026-06-15",
+      "updatedAt": "2026-06-16",
       "reviewRecords": [],
       "timelineRecords": [
         {
@@ -182,7 +182,8 @@
           "photoUrl": "",
           "systemMessage": "状态变更：进行中 → 待复核",
           "createdAt": "2026-06-15T05:37:23.899Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         }
       ],
       "photoArchive": {
@@ -196,7 +197,7 @@
         "after": []
       },
       "templateSnapshot": null,
-      "version": 3
+      "version": 4
     },
     {
       "id": "R-002",
@@ -271,7 +272,8 @@
           "notes": "共发现12页有不同程度破损",
           "photoUrl": "",
           "createdAt": "2026-06-01T09:00:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         },
         {
           "id": "T-002",
@@ -284,7 +286,8 @@
           "notes": "清理过程注意保护页面文字",
           "photoUrl": "",
           "createdAt": "2026-06-02T10:30:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         },
         {
           "id": "T-003",
@@ -297,7 +300,8 @@
           "notes": "补缀时注意纸质纹理方向一致",
           "photoUrl": "",
           "createdAt": "2026-06-03T14:00:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         },
         {
           "id": "T-004",
@@ -310,7 +314,8 @@
           "notes": "穿线采用四眼线装法",
           "photoUrl": "",
           "createdAt": "2026-06-04T11:00:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         },
         {
           "id": "T-005",
@@ -323,7 +328,8 @@
           "notes": "",
           "systemMessage": "状态变更：待复核 → 已完成",
           "createdAt": "2026-06-05T16:00:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         }
       ],
       "templateSnapshot": null,
@@ -368,7 +374,8 @@
           "notes": "虫蛀面积约30%，主要集中在页面边缘",
           "photoUrl": "",
           "createdAt": "2026-06-08T09:00:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         },
         {
           "id": "T-TEST-002",
@@ -381,7 +388,8 @@
           "notes": "清理时注意力度，避免纸张二次损伤",
           "photoUrl": "",
           "createdAt": "2026-06-09T10:30:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         },
         {
           "id": "T-TEST-003",
@@ -394,7 +402,8 @@
           "notes": "已整改第一次退回提出的问题，补纸贴合度已提升",
           "photoUrl": "",
           "createdAt": "2026-06-11T14:00:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         },
         {
           "id": "T-TEST-004",
@@ -407,7 +416,8 @@
           "notes": "",
           "systemMessage": "状态变更：进行中 → 待复核",
           "createdAt": "2026-06-14T16:30:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         }
       ],
       "photoArchive": {
@@ -483,7 +493,8 @@
           "notes": "共发现8页脱胶，书脊完全断裂",
           "photoUrl": "",
           "createdAt": "2026-05-15T09:00:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         },
         {
           "id": "T-TEST-012",
@@ -496,7 +507,8 @@
           "notes": "补缀时注意保持纸张纹理一致",
           "photoUrl": "",
           "createdAt": "2026-05-18T10:30:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         },
         {
           "id": "T-TEST-013",
@@ -509,7 +521,8 @@
           "notes": "",
           "systemMessage": "状态变更：待复核 → 已完成",
           "createdAt": "2026-06-10T16:00:00.000Z",
-          "version": 1
+          "version": 1,
+          "materialUsages": []
         }
       ],
       "photoArchive": {
@@ -589,7 +602,7 @@
       "unit": "张",
       "quantity": 500,
       "lowStockThreshold": 100,
-      "updatedAt": "2026-06-10"
+      "updatedAt": "2026-06-16"
     },
     {
       "id": "M-002",
@@ -605,7 +618,7 @@
       "unit": "克",
       "quantity": 2000,
       "lowStockThreshold": 500,
-      "updatedAt": "2026-06-09"
+      "updatedAt": "2026-06-16"
     },
     {
       "id": "M-004",
@@ -748,7 +761,7 @@
     }
   ],
   "_meta": {
-    "schemaVersion": 5,
+    "schemaVersion": 6,
     "migrations": [
       {
         "version": 2,
@@ -767,6 +780,11 @@
       {
         "version": 5,
         "appliedAt": "2026-06-15T07:56:53.468Z",
+        "status": "success"
+      },
+      {
+        "version": 6,
+        "appliedAt": "2026-06-15T23:45:22.153Z",
         "status": "success"
       }
     ]
@@ -1281,5 +1299,135 @@
       "lastSyncError": null
     }
   ],
-  "syncQueue": []
+  "syncQueue": [],
+  "materialMovements": [
+    {
+      "id": "MM-1781574793670-zr7l65",
+      "materialId": "M-003",
+      "materialName": "小麦淀粉浆",
+      "unit": "克",
+      "type": "restore",
+      "quantity": 50,
+      "balanceAfter": 2000,
+      "referenceType": "timeline_delete",
+      "referenceId": "T-1781574706460-ykkpfp",
+      "projectId": null,
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "note": "删除修复记录，恢复库存",
+      "createdAt": "2026-06-16T01:53:13.670Z"
+    },
+    {
+      "id": "MM-1781574793670-saenbo",
+      "materialId": "M-001",
+      "materialName": "楮皮纸",
+      "unit": "张",
+      "type": "restore",
+      "quantity": 10,
+      "balanceAfter": 500,
+      "referenceType": "timeline_delete",
+      "referenceId": "T-1781574706460-ykkpfp",
+      "projectId": null,
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "note": "删除修复记录，恢复库存",
+      "createdAt": "2026-06-16T01:53:13.670Z"
+    },
+    {
+      "id": "MM-1781574706460-4j53j3",
+      "materialId": "M-003",
+      "materialName": "小麦淀粉浆",
+      "unit": "克",
+      "type": "consume",
+      "quantity": 50,
+      "balanceAfter": 1950,
+      "referenceType": "timeline",
+      "referenceId": "T-1781574706460-ykkpfp",
+      "projectId": "R-001",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "note": "修复过程消耗",
+      "createdAt": "2026-06-16T01:51:46.460Z"
+    },
+    {
+      "id": "MM-1781574706460-ls1h7w",
+      "materialId": "M-001",
+      "materialName": "楮皮纸",
+      "unit": "张",
+      "type": "consume",
+      "quantity": 10,
+      "balanceAfter": 490,
+      "referenceType": "timeline",
+      "referenceId": "T-1781574706460-ykkpfp",
+      "projectId": "R-001",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "note": "修复过程消耗",
+      "createdAt": "2026-06-16T01:51:46.460Z"
+    },
+    {
+      "id": "MM-1781567290099-2dyhbp",
+      "materialId": "M-003",
+      "materialName": "小麦淀粉浆",
+      "unit": "克",
+      "type": "restore",
+      "quantity": 50,
+      "balanceAfter": 2000,
+      "referenceType": "timeline_delete",
+      "referenceId": "T-1781567256477-4n1c6b",
+      "projectId": null,
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "note": "删除修复记录，恢复库存",
+      "createdAt": "2026-06-15T23:48:10.099Z"
+    },
+    {
+      "id": "MM-1781567290098-xv3qc7",
+      "materialId": "M-001",
+      "materialName": "楮皮纸",
+      "unit": "张",
+      "type": "restore",
+      "quantity": 10,
+      "balanceAfter": 500,
+      "referenceType": "timeline_delete",
+      "referenceId": "T-1781567256477-4n1c6b",
+      "projectId": null,
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "note": "删除修复记录，恢复库存",
+      "createdAt": "2026-06-15T23:48:10.098Z"
+    },
+    {
+      "id": "MM-1781567256477-ij2vd7",
+      "materialId": "M-003",
+      "materialName": "小麦淀粉浆",
+      "unit": "克",
+      "type": "consume",
+      "quantity": 50,
+      "balanceAfter": 1950,
+      "referenceType": "timeline",
+      "referenceId": "T-1781567256477-4n1c6b",
+      "projectId": "R-1781510238618",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "note": "修复过程消耗",
+      "createdAt": "2026-06-15T23:47:36.477Z"
+    },
+    {
+      "id": "MM-1781567256477-r3jovt",
+      "materialId": "M-001",
+      "materialName": "楮皮纸",
+      "unit": "张",
+      "type": "consume",
+      "quantity": 10,
+      "balanceAfter": 490,
+      "referenceType": "timeline",
+      "referenceId": "T-1781567256477-4n1c6b",
+      "projectId": "R-1781510238618",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "note": "修复过程消耗",
+      "createdAt": "2026-06-15T23:47:36.477Z"
+    }
+  ]
 }

@@ -1,4 +1,4 @@
-export function createTimelineRecord({ type, operator, operatorId, date, steps, materials, notes, photoUrl, systemMessage }) {
+export function createTimelineRecord({ type, operator, operatorId, date, steps, materials, notes, photoUrl, systemMessage, materialUsages }) {
   return {
     id: `T-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type: type || "manual",
@@ -10,6 +10,7 @@ export function createTimelineRecord({ type, operator, operatorId, date, steps, 
     notes: notes || "",
     photoUrl: photoUrl || "",
     systemMessage: systemMessage || "",
+    materialUsages: materialUsages || [],
     createdAt: new Date().toISOString(),
     version: 1
   };
