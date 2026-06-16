@@ -51,6 +51,13 @@ function formatDateTime(isoString) {
   return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
+function formatDate(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+
 function getActionIcon(actionType) {
   const icons = {
     project_create: '➕',
@@ -58,7 +65,8 @@ function getActionIcon(actionType) {
     status_change: '🔄',
     review_pass: '✅',
     review_reject: '❌',
-    rollback: '↩️'
+    rollback: '↩️',
+    template_sync: '🔗'
   };
   return icons[actionType] || '📝';
 }
@@ -70,7 +78,8 @@ function getActionBadgeClass(actionType) {
     status_change: 'status',
     review_pass: 'pass',
     review_reject: 'reject',
-    rollback: 'rollback'
+    rollback: 'rollback',
+    template_sync: 'sync'
   };
   return classes[actionType] || 'default';
 }
@@ -90,7 +99,7 @@ function showModal(project) {
       '<div class="modal-body">' +
         '<div class="audit-toolbar">' +
           '<span class="audit-count">共 ' + (auditLogs ? auditLogs.length : 0) + ' 条记录</span>' +
-          (isAdmin() ? '<span class="audit-hint">💡 点击记录可查看详情，管理员可执行回滚</span>' : '') +
+          (isAdmin() ? '<span class="audit-hint">💡 点击记录可查看详情，管理员可执行回滚</span>' : '<span class="audit-hint">💡 点击记录可查看详情</span>') +
         '</div>' +
         '<div class="audit-timeline" id="audit-timeline"></div>' +
         '<div id="audit-detail" class="audit-detail" style="display:none;"></div>' +
@@ -122,6 +131,24 @@ function renderTimeline() {
   list.innerHTML = auditLogs.map((log, idx) => {
     const isSelected = auditSelectedLogId === log.id;
     const canRollback = isAdmin() && log.hasStateSnapshot && log.actionType !== 'rollback';
+    let rollbackInfoHtml = '';
+    if (log.actionType === 'rollback') {
+      const meta = log.rollbackMeta;
+      const targetInfo = log.rollbackTargetInfo;
+      if (meta || targetInfo) {
+        rollbackInfoHtml = '<div class="audit-rollback-info">';
+        if (meta && meta.reason) {
+          rollbackInfoHtml += '<div class="audit-rollback-reason-line">📝 回滚原因：' + escapeHtml(meta.reason) + '</div>';
+        }
+        if (targetInfo) {
+          rollbackInfoHtml += '<div class="audit-rollback-target-line">🎯 回滚目标：' + escapeHtml(targetInfo.actionLabel) + '（' + escapeHtml(targetInfo.operator) + ' · ' + formatDateTime(targetInfo.timestamp) + '）</div>';
+        }
+        if (meta && meta.sourceLogAction && !targetInfo) {
+          rollbackInfoHtml += '<div class="audit-rollback-target-line">🎯 回滚目标：' + escapeHtml(meta.sourceLogAction) + '（' + escapeHtml(meta.sourceLogOperator) + ' · ' + formatDateTime(meta.sourceLogTimestamp) + '）</div>';
+        }
+        rollbackInfoHtml += '</div>';
+      }
+    }
     return (
       '<div class="audit-item ' + (isSelected ? 'selected' : '') + '" data-log-id="' + escapeHtml(log.id) + '">' +
         '<div class="audit-item-line">' +
@@ -137,6 +164,7 @@ function renderTimeline() {
           '</div>' +
           '<div class="audit-item-summary">' + escapeHtml(log.summary) + '</div>' +
           (log.note ? '<div class="audit-item-note">📝 ' + escapeHtml(log.note) + '</div>' : '') +
+          rollbackInfoHtml +
           '<div class="audit-item-source">来源：' + escapeHtml(log.source) + '</div>' +
         '</div>' +
       '</div>'
@@ -172,6 +200,8 @@ async function showDetail(logId) {
       log.changes.forEach(change => {
         const typeLabel = change.type === 'add' ? '新增' : change.type === 'remove' ? '删除' : '修改';
         const typeClass = change.type === 'add' ? 'add' : change.type === 'remove' ? 'remove' : 'modify';
+        const oldDisplay = typeof change.oldValue === 'object' ? JSON.stringify(change.oldValue) : (change.oldValue || '(空)');
+        const newDisplay = typeof change.newValue === 'object' ? JSON.stringify(change.newValue) : (change.newValue || '(空)');
         changesHtml +=
           '<div class="audit-change-item">' +
             '<div class="audit-change-head">' +
@@ -179,12 +209,24 @@ async function showDetail(logId) {
               '<span class="audit-change-field">' + escapeHtml(change.label) + '</span>' +
             '</div>' +
             '<div class="audit-change-values">' +
-              '<div class="audit-change-old"><span class="label">变更前：</span><span class="value">' + escapeHtml(change.oldValue || '(空)') + '</span></div>' +
-              '<div class="audit-change-new"><span class="label">变更后：</span><span class="value">' + escapeHtml(change.newValue || '(空)') + '</span></div>' +
+              '<div class="audit-change-old"><span class="label">变更前：</span><span class="value">' + escapeHtml(oldDisplay) + '</span></div>' +
+              '<div class="audit-change-new"><span class="label">变更后：</span><span class="value">' + escapeHtml(newDisplay) + '</span></div>' +
             '</div>' +
           '</div>';
       });
       changesHtml += '</div>';
+    }
+
+    let rollbackMetaHtml = '';
+    if (log.actionType === 'rollback' && log.rollbackMeta) {
+      const meta = log.rollbackMeta;
+      rollbackMetaHtml =
+        '<div class="audit-changes"><h4>回滚元信息</h4>' +
+          '<div class="info-row"><span class="info-label">回滚原因</span><span class="info-value">' + escapeHtml(meta.reason || '未填写') + '</span></div>' +
+          '<div class="info-row"><span class="info-label">目标操作</span><span class="info-value">' + escapeHtml(meta.sourceLogAction || '-') + '</span></div>' +
+          '<div class="info-row"><span class="info-label">目标操作人</span><span class="info-value">' + escapeHtml(meta.sourceLogOperator || '-') + '</span></div>' +
+          '<div class="info-row"><span class="info-label">目标操作时间</span><span class="info-value">' + formatDateTime(meta.sourceLogTimestamp) + '</span></div>' +
+        '</div>';
     }
 
     let rollbackBtnHtml = '';
@@ -209,6 +251,7 @@ async function showDetail(logId) {
           (log.note ? '<div class="info-row"><span class="info-label">备注</span><span class="info-value">' + escapeHtml(log.note) + '</span></div>' : '') +
         '</div>' +
         changesHtml +
+        rollbackMetaHtml +
         rollbackBtnHtml +
       '</div>';
 
@@ -223,6 +266,168 @@ async function showDetail(logId) {
     detailEl.innerHTML = '<div class="audit-error">加载详情失败：' + escapeHtml(e.message) + '</div>';
     detailEl.style.display = 'block';
   }
+}
+
+function renderFieldChangesHtml(fieldChanges) {
+  if (!fieldChanges || fieldChanges.length === 0) {
+    return '<div class="audit-preview-section"><h5>📋 字段级变更</h5><div class="audit-no-change">无字段级变更</div></div>';
+  }
+  let html = '<div class="audit-preview-section"><h5>📋 字段级变更（' + fieldChanges.length + ' 项）</h5><div class="audit-field-changes">';
+  fieldChanges.forEach(change => {
+    const oldVal = typeof change.oldValue === 'object' ? JSON.stringify(change.oldValue) : (change.oldValue || '(空)');
+    const newVal = typeof change.newValue === 'object' ? JSON.stringify(change.newValue) : (change.newValue || '(空)');
+    html +=
+      '<div class="audit-field-change-row">' +
+        '<div class="audit-field-change-label">' + escapeHtml(change.label) + '</div>' +
+        '<div class="audit-field-change-values">' +
+          '<div class="audit-field-change-old"><span class="tag">当前</span>' + escapeHtml(oldVal) + '</div>' +
+          '<div class="audit-field-change-arrow">→</div>' +
+          '<div class="audit-field-change-new"><span class="tag target">回滚后</span>' + escapeHtml(newVal) + '</div>' +
+        '</div>' +
+      '</div>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function renderTemplateSnapshotHtml(preview) {
+  const data = preview.templateSnapshot;
+  if (!data) return '';
+  const cur = data.current || {};
+  const tgt = data.target || {};
+  let html = '<div class="audit-preview-section ' + (data.willChange ? 'will-change' : 'no-change-section') + '">';
+  html += '<h5>📄 模板快照' + (data.willChange ? ' <span class="change-tag">将变更</span>' : ' <span class="no-change-tag">无变更</span>') + '</h5>';
+  html += '<div class="audit-compare-grid">';
+  html += '<div class="audit-compare-col"><div class="col-title">当前</div>';
+  if (cur.exists) {
+    html +=
+      '<div class="audit-template-info">' +
+        '<div class="tpl-name">' + escapeHtml(cur.summary) + '</div>' +
+        '<div class="tpl-meta">分类：' + escapeHtml(cur.templateCategory || '-') + '</div>' +
+        '<div class="tpl-meta">应用日期：' + formatDate(cur.appliedAt) + '</div>' +
+        '<div class="tpl-meta">预计工期：' + (cur.estimatedDays || 0) + ' 天</div>' +
+        '<div class="tpl-meta">复核要求：' + (cur.reviewRequired ? '需要' : '不需要') + '</div>' +
+      '</div>';
+  } else {
+    html += '<div class="audit-empty-line">无关联模板</div>';
+  }
+  html += '</div><div class="audit-compare-col"><div class="col-title target">回滚后</div>';
+  if (tgt.exists) {
+    html +=
+      '<div class="audit-template-info">' +
+        '<div class="tpl-name">' + escapeHtml(tgt.summary) + '</div>' +
+        '<div class="tpl-meta">分类：' + escapeHtml(tgt.templateCategory || '-') + '</div>' +
+        '<div class="tpl-meta">应用日期：' + formatDate(tgt.appliedAt) + '</div>' +
+        '<div class="tpl-meta">预计工期：' + (tgt.estimatedDays || 0) + ' 天</div>' +
+        '<div class="tpl-meta">复核要求：' + (tgt.reviewRequired ? '需要' : '不需要') + '</div>' +
+      '</div>';
+  } else {
+    html += '<div class="audit-empty-line">无关联模板</div>';
+  }
+  html += '</div></div></div>';
+  return html;
+}
+
+function renderReviewRecordsHtml(preview) {
+  const data = preview.reviewRecords;
+  if (!data) return '';
+  const cur = data.current || { count: 0, items: [] };
+  const tgt = data.target || { count: 0, items: [] };
+  let html = '<div class="audit-preview-section ' + (data.willChange ? 'will-change' : 'no-change-section') + '">';
+  html += '<h5>✅ 复核记录' + (data.willChange ? ' <span class="change-tag">将变更</span>' : ' <span class="no-change-tag">无变更</span>') + '</h5>';
+  html += '<div class="audit-compare-grid">';
+
+  function renderReviewList(items, count, isTarget) {
+    let inner = '<div class="col-title ' + (isTarget ? 'target' : '') + '">' + (isTarget ? '回滚后' : '当前') + '（' + count + ' 条）</div>';
+    if (!items || items.length === 0) {
+      inner += '<div class="audit-empty-line">暂无复核记录</div>';
+    } else {
+      items.forEach(r => {
+        const resultClass = r.result === 'pass' ? 'pass' : 'reject';
+        inner +=
+          '<div class="audit-review-item">' +
+            '<div class="review-head">' +
+              '<span class="review-index">#' + r.index + '</span>' +
+              '<span class="review-result ' + resultClass + '">' + escapeHtml(r.resultLabel || r.result) + '</span>' +
+              '<span class="review-reviewer">' + escapeHtml(r.reviewer) + '</span>' +
+              '<span class="review-date">' + formatDate(r.date) + '</span>' +
+            '</div>' +
+            (r.opinion ? '<div class="review-opinion">' + escapeHtml(r.opinion) + '</div>' : '') +
+          '</div>';
+      });
+    }
+    return inner;
+  }
+
+  html += '<div class="audit-compare-col">' + renderReviewList(cur.items, cur.count, false) + '</div>';
+  html += '<div class="audit-compare-col">' + renderReviewList(tgt.items, tgt.count, true) + '</div>';
+  html += '</div></div>';
+  return html;
+}
+
+function renderTimelineRecordsHtml(preview) {
+  const data = preview.timelineRecords;
+  if (!data) return '';
+  const cur = data.current || { count: 0, items: [] };
+  const tgt = data.target || { count: 0, items: [] };
+  let html = '<div class="audit-preview-section ' + (data.willChange ? 'will-change' : 'no-change-section') + '">';
+  html += '<h5>📅 时间线记录' + (data.willChange ? ' <span class="change-tag">将变更</span>' : ' <span class="no-change-tag">无变更</span>') + '</h5>';
+  html += '<div class="audit-compare-grid">';
+
+  function renderTimelineList(items, count, hasMore, isTarget) {
+    let inner = '<div class="col-title ' + (isTarget ? 'target' : '') + '">' + (isTarget ? '回滚后' : '当前') + '（' + count + ' 条）</div>';
+    if (!items || items.length === 0) {
+      inner += '<div class="audit-empty-line">暂无时间线记录</div>';
+    } else {
+      items.forEach(t => {
+        const typeClass = t.type === 'system' ? 'system' : 'manual';
+        inner +=
+          '<div class="audit-timeline-item">' +
+            '<div class="tl-head">' +
+              '<span class="tl-type ' + typeClass + '">' + escapeHtml(t.typeLabel || t.type) + '</span>' +
+              '<span class="tl-operator">' + escapeHtml(t.operator || '-') + '</span>' +
+              '<span class="tl-date">' + formatDate(t.date) + '</span>' +
+            '</div>' +
+            '<div class="tl-content">' + escapeHtml(t.systemMessage || t.steps || '-') + '</div>' +
+          '</div>';
+      });
+      if (hasMore) {
+        inner += '<div class="tl-more-hint">... 还有更多记录</div>';
+      }
+    }
+    return inner;
+  }
+
+  html += '<div class="audit-compare-col">' + renderTimelineList(cur.items, cur.count, cur.hasMore, false) + '</div>';
+  html += '<div class="audit-compare-col">' + renderTimelineList(tgt.items, tgt.count, tgt.hasMore, true) + '</div>';
+  html += '</div></div>';
+  return html;
+}
+
+function renderPhotoArchiveHtml(preview) {
+  const data = preview.photoArchive;
+  if (!data) return '';
+  const cur = data.current || { before: 0, during: 0, after: 0, total: 0 };
+  const tgt = data.target || { before: 0, during: 0, after: 0, total: 0 };
+  let html = '<div class="audit-preview-section ' + (data.willChange ? 'will-change' : 'no-change-section') + '">';
+  html += '<h5>📷 照片归档摘要' + (data.willChange ? ' <span class="change-tag">将变更</span>' : ' <span class="no-change-tag">无变更</span>') + '</h5>';
+  html += '<div class="audit-photo-compare">';
+
+  function renderPhotoStage(label, before, during, after, total, isTarget) {
+    let inner = '<div class="photo-col ' + (isTarget ? 'target' : '') + '"><div class="col-title ' + (isTarget ? 'target' : '') + '">' + (isTarget ? '回滚后' : '当前') + '</div>';
+    inner += '<div class="photo-total">共 ' + total + ' 张</div>';
+    inner += '<div class="photo-stage-row">';
+    inner += '<span class="photo-stage before">修复前 ' + before + ' 张</span>';
+    inner += '<span class="photo-stage during">修复中 ' + during + ' 张</span>';
+    inner += '<span class="photo-stage after">修复后 ' + after + ' 张</span>';
+    inner += '</div></div>';
+    return inner;
+  }
+
+  html += renderPhotoStage('', cur.before, cur.during, cur.after, cur.total, false);
+  html += renderPhotoStage('', tgt.before, tgt.during, tgt.after, tgt.total, true);
+  html += '</div></div>';
+  return html;
 }
 
 async function showRollbackPreview(targetLogId) {
@@ -242,25 +447,12 @@ async function showRollbackPreview(targetLogId) {
 
     auditRollbackPreview = preview;
 
-    let changesHtml = '';
-    if (preview.willChange && preview.willChange.length > 0) {
-      changesHtml = '<div class="audit-changes"><h4>将回滚的变更</h4>';
-      preview.willChange.forEach(change => {
-        changesHtml +=
-          '<div class="audit-change-item">' +
-            '<div class="audit-change-head">' +
-              '<span class="audit-change-field">' + escapeHtml(change.label) + '</span>' +
-            '</div>' +
-            '<div class="audit-change-values">' +
-              '<div class="audit-change-old"><span class="label">当前值：</span><span class="value">' + escapeHtml(change.oldValue || '(空)') + '</span></div>' +
-              '<div class="audit-change-new"><span class="label">将回滚为：</span><span class="value">' + escapeHtml(change.newValue || '(空)') + '</span></div>' +
-            '</div>' +
-          '</div>';
-      });
-      changesHtml += '</div>';
-    } else {
-      changesHtml = '<div class="audit-no-change">当前状态与目标状态一致，无需回滚。</div>';
-    }
+    let sectionsHtml = '';
+    sectionsHtml += renderFieldChangesHtml(preview.fieldChanges);
+    sectionsHtml += renderTemplateSnapshotHtml(preview);
+    sectionsHtml += renderReviewRecordsHtml(preview);
+    sectionsHtml += renderTimelineRecordsHtml(preview);
+    sectionsHtml += renderPhotoArchiveHtml(preview);
 
     const canExecute = preview.hasChanges;
 
@@ -268,16 +460,18 @@ async function showRollbackPreview(targetLogId) {
       '<div class="audit-rollback-card">' +
         '<div class="audit-rollback-header">' +
           '<h4>⚠️ 回滚确认</h4>' +
+          '<span class="rollback-target-badge">目标操作</span>' +
         '</div>' +
         '<div class="audit-rollback-info">' +
           '<div class="info-row"><span class="info-label">目标操作</span><span class="info-value">' + escapeHtml(preview.targetAction) + '</span></div>' +
           '<div class="info-row"><span class="info-label">操作人</span><span class="info-value">' + escapeHtml(preview.targetOperator) + '</span></div>' +
           '<div class="info-row"><span class="info-label">操作时间</span><span class="info-value">' + formatDateTime(preview.targetTimestamp) + '</span></div>' +
         '</div>' +
-        changesHtml +
+        '<div class="audit-preview-sections">' + sectionsHtml + '</div>' +
         '<div class="audit-rollback-reason">' +
-          '<label>回滚原因（可选）</label>' +
-          '<textarea id="rollback-reason" placeholder="请输入回滚原因，将记录到审计日志中"></textarea>' +
+          '<label class="required">回滚原因 <span class="req-mark">*</span></label>' +
+          '<textarea id="rollback-reason" placeholder="请填写回滚原因（至少 5 个字符），此原因将记录在审计日志中" rows="3"></textarea>' +
+          '<div class="reason-error" id="rollback-reason-error" style="display:none;color:#a84b2f;font-size:12px;margin-top:4px;"></div>' +
         '</div>' +
         '<div class="audit-rollback-actions">' +
           '<button class="secondary" id="cancel-rollback-btn">取消</button>' +
@@ -306,19 +500,47 @@ async function showRollbackPreview(targetLogId) {
 async function confirmRollback() {
   if (!auditRollbackPreview) return;
 
-  const reason = document.getElementById('rollback-reason')?.value || '';
+  const reasonEl = document.getElementById('rollback-reason');
+  const reasonErrorEl = document.getElementById('rollback-reason-error');
+  const reason = (reasonEl?.value || '').trim();
+
+  if (!reason) {
+    reasonErrorEl.textContent = '请填写回滚原因';
+    reasonErrorEl.style.display = 'block';
+    reasonEl?.focus();
+    return;
+  }
+
+  if (reason.length < 5) {
+    reasonErrorEl.textContent = '回滚原因至少需要 5 个字符';
+    reasonErrorEl.style.display = 'block';
+    reasonEl?.focus();
+    return;
+  }
+
+  reasonErrorEl.style.display = 'none';
+
+  const confirmBtn = document.getElementById('confirm-rollback-btn');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '回滚中...';
+  }
 
   try {
     const result = await api('/api/projects/' + auditProjectId + '/rollback', {
       method: 'POST',
       body: JSON.stringify({
         targetLogId: auditRollbackPreview.targetLogId,
-        reason: reason.trim()
+        reason: reason
       })
     });
 
     if (result.error) {
       alert('回滚失败：' + (result.message || result.error));
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '确认回滚';
+      }
       return;
     }
 
@@ -340,5 +562,9 @@ async function confirmRollback() {
     }
   } catch (e) {
     alert('回滚失败：' + e.message);
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '确认回滚';
+    }
   }
 }

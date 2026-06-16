@@ -41,7 +41,7 @@
     {
       "id": "R-1781510220362",
       "status": "进行中",
-      "updatedAt": "2026-06-15",
+      "updatedAt": "2026-06-16",
       "version": 1,
       "reviewRecords": [],
       "timelineRecords": [],
@@ -1078,6 +1078,94 @@
     ]
   },
   "auditLogs": [
+    {
+      "id": "AUD-1781628524093-08ih55",
+      "projectId": "R-1781510220362",
+      "actionType": "rollback",
+      "actionLabel": "回滚操作",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "rollback",
+      "timestamp": "2026-06-16T16:48:44.093Z",
+      "beforeState": {
+        "title": "测试从入库创建",
+        "era": "宋代",
+        "damage": "测试破损",
+        "steps": "测试步骤",
+        "materials": "测试材料",
+        "owner": "顾眉",
+        "dueDate": "2026-07-01",
+        "status": "进行中",
+        "reviewRecords": [],
+        "timelineRecords": [],
+        "photoArchive": {
+          "before": [],
+          "during": [],
+          "after": []
+        },
+        "templateSnapshot": null
+      },
+      "afterState": {
+        "title": "测试从入库创建",
+        "era": "宋代",
+        "damage": "测试破损",
+        "steps": "测试步骤",
+        "materials": "测试材料",
+        "owner": "顾眉",
+        "dueDate": "2026-07-01",
+        "status": "进行中",
+        "reviewRecords": [],
+        "timelineRecords": [],
+        "photoArchive": {
+          "before": [],
+          "during": [],
+          "after": []
+        },
+        "templateSnapshot": null
+      },
+      "changes": [
+        {
+          "field": "reviewRecords",
+          "label": "复核记录",
+          "oldValue": [],
+          "newValue": [],
+          "type": "modify"
+        },
+        {
+          "field": "timelineRecords",
+          "label": "时间线记录",
+          "oldValue": [],
+          "newValue": [],
+          "type": "modify"
+        },
+        {
+          "field": "photoArchive",
+          "label": "照片归档",
+          "oldValue": {
+            "before": [],
+            "during": [],
+            "after": []
+          },
+          "newValue": {
+            "before": [],
+            "during": [],
+            "after": []
+          },
+          "type": "modify"
+        }
+      ],
+      "summary": "3 个字段变更：复核记录、时间线记录、照片归档",
+      "note": "测试功能：误操作后需要回滚到初始状态 —— 回滚到操作：创建项目（AUD-1781510220363-8iaakh），由 未知用户 于 2026-06-15T07:57:00.363Z 执行",
+      "relatedId": "AUD-1781510220363-8iaakh",
+      "rollbackMeta": {
+        "reason": "测试功能：误操作后需要回滚到初始状态",
+        "sourceLogId": "AUD-1781510220363-8iaakh",
+        "sourceLogAction": "创建项目",
+        "sourceLogOperator": "未知用户",
+        "sourceLogTimestamp": "2026-06-15T07:57:00.363Z",
+        "targetLogId": "AUD-1781628524093-08ih55"
+      }
+    },
     {
       "id": "AUD-1781615453997-0nham5",
       "projectId": "R-001",

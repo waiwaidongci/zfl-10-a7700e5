@@ -7,7 +7,11 @@ const TRACKED_FIELDS = [
   "owner",
   "dueDate",
   "status",
-  "photos"
+  "photos",
+  "reviewRecords",
+  "timelineRecords",
+  "photoArchive",
+  "templateSnapshot"
 ];
 
 const FIELD_LABELS = {
@@ -19,7 +23,11 @@ const FIELD_LABELS = {
   owner: "负责人",
   dueDate: "预计完成日期",
   status: "状态",
-  photos: "封面照片"
+  photos: "封面照片",
+  reviewRecords: "复核记录",
+  timelineRecords: "时间线记录",
+  photoArchive: "照片归档",
+  templateSnapshot: "模板快照"
 };
 
 function deepClone(obj) {
