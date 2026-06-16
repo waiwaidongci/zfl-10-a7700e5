@@ -60,12 +60,13 @@ export function createTimelineDraft(projectId, timelineData, userId) {
 }
 
 export function createPhotoDraft(projectId, photoData, userId) {
-  const { stage, url, index, operation, basePhotoCount } = photoData;
+  const { stage, url, index, operation, basePhotoCount, basePhotoList } = photoData;
   let op = operation;
   if (!op) {
     op = url && index === undefined ? "add" : (index !== undefined ? "delete" : "add");
   }
   const entityId = `${projectId}-${stage}`;
+  const baseline = Array.isArray(basePhotoList) ? deepClone(basePhotoList) : null;
 
   return {
     id: generateDraftId(),
@@ -77,6 +78,7 @@ export function createPhotoDraft(projectId, photoData, userId) {
     data: deepClone(photoData),
     baseVersion: 1,
     basePhotoCount: basePhotoCount !== undefined ? basePhotoCount : -1,
+    basePhotoList: baseline,
     createdBy: userId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

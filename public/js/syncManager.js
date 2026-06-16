@@ -106,11 +106,11 @@ window.SyncManager = {
     const photosMatch = path.match(/^\/api\/projects\/([^/]+)\/photos$/);
     if (photosMatch && options.method === 'POST') {
       const projectId = photosMatch[1];
-      return this.savePhotoAddDraft(projectId, body.stage, body.url, body.basePhotoCount);
+      return this.savePhotoAddDraft(projectId, body.stage, body.url, body.basePhotoCount, body.basePhotoList);
     }
     if (photosMatch && options.method === 'DELETE') {
       const projectId = photosMatch[1];
-      return this.savePhotoDeleteDraft(projectId, body.stage, body.index, body.url, body.basePhotoCount);
+      return this.savePhotoDeleteDraft(projectId, body.stage, body.index, body.url, body.basePhotoCount, body.basePhotoList);
     }
     throw new Error('网络不可用，且该操作不支持离线保存');
   },
@@ -274,7 +274,8 @@ window.SyncManager = {
     return { _savedAsDraft: true, draftId, operation: 'delete' };
   },
 
-  async savePhotoAddDraft(projectId, stage, url, basePhotoCount) {
+  async savePhotoAddDraft(projectId, stage, url, basePhotoCount, basePhotoList) {
+    const baseline = Array.isArray(basePhotoList) ? [...basePhotoList] : null;
     const draftId = `D-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const draft = {
       id: draftId,
@@ -283,9 +284,10 @@ window.SyncManager = {
       operation: 'add',
       entityId: `${projectId}-${stage}`,
       projectId,
-      data: { stage, url, operation: 'add' },
+      data: { stage, url, operation: 'add', basePhotoCount: basePhotoCount !== undefined ? basePhotoCount : -1, basePhotoList: baseline },
       baseVersion: 1,
       basePhotoCount: basePhotoCount !== undefined ? basePhotoCount : -1,
+      basePhotoList: baseline,
       createdBy: this.getCurrentUserId(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -306,7 +308,8 @@ window.SyncManager = {
     };
   },
 
-  async savePhotoDeleteDraft(projectId, stage, index, url, basePhotoCount) {
+  async savePhotoDeleteDraft(projectId, stage, index, url, basePhotoCount, basePhotoList) {
+    const baseline = Array.isArray(basePhotoList) ? [...basePhotoList] : null;
     const draftId = `D-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const draft = {
       id: draftId,
@@ -315,9 +318,10 @@ window.SyncManager = {
       operation: 'delete',
       entityId: `${projectId}-${stage}`,
       projectId,
-      data: { stage, index, url, operation: 'delete' },
+      data: { stage, index, url, operation: 'delete', basePhotoCount: basePhotoCount !== undefined ? basePhotoCount : -1, basePhotoList: baseline },
       baseVersion: 1,
       basePhotoCount: basePhotoCount !== undefined ? basePhotoCount : -1,
+      basePhotoList: baseline,
       createdBy: this.getCurrentUserId(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -564,12 +568,21 @@ window.SyncManager = {
     const draft = this.getDraftById(draftId);
     if (!draft) throw new Error('草稿不存在');
 
+    const data = { ...draft.data };
+    if (draft.type === 'photos') {
+      data.operation = data.operation || draft.operation;
+      data.basePhotoCount = data.basePhotoCount !== undefined ? data.basePhotoCount : draft.basePhotoCount;
+      data.basePhotoList = Array.isArray(data.basePhotoList)
+        ? data.basePhotoList
+        : (Array.isArray(draft.basePhotoList) ? draft.basePhotoList : null);
+    }
+
     return await this.api('/api/sync/drafts', {
       method: 'POST',
       body: JSON.stringify({
         type: draft.type,
         projectId: draft.projectId,
-        data: draft.data
+        data
       }),
       allowOffline: false
     });
