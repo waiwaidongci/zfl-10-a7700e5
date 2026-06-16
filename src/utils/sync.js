@@ -59,6 +59,29 @@ export function createTimelineDraft(projectId, timelineData, userId) {
   };
 }
 
+export function createPhotoDraft(projectId, photoData, userId) {
+  const { stage, url, index, operation } = photoData;
+  const op = operation || (url ? "add" : (index !== undefined ? "delete" : "add"));
+  const entityId = `${projectId}-${stage}`;
+
+  return {
+    id: generateDraftId(),
+    type: "photos",
+    entityType: "photos",
+    operation: op,
+    entityId,
+    projectId,
+    data: deepClone(photoData),
+    baseVersion: 1,
+    createdBy: userId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    status: "pending",
+    syncAttempts: 0,
+    lastSyncError: null
+  };
+}
+
 export function detectProjectConflict(localDraft, serverProject) {
   if (!serverProject) return null;
   if (localDraft.baseVersion >= serverProject.version) return null;
@@ -125,6 +148,73 @@ export function detectTimelineConflict(localDraft, serverRecords) {
   };
 }
 
+export function detectPhotosConflict(localDraft, serverProject) {
+  if (!serverProject || !serverProject.photoArchive) return null;
+
+  const stage = localDraft.data.stage;
+  const serverPhotos = serverProject.photoArchive[stage] || [];
+  const operation = localDraft.operation;
+
+  let hasConflict = false;
+  let conflictType = null;
+
+  if (operation === "add") {
+    const url = localDraft.data.url;
+    if (serverPhotos.includes(url)) {
+      hasConflict = true;
+      conflictType = "duplicate";
+    }
+  } else if (operation === "delete") {
+    const index = localDraft.data.index;
+    if (index < 0 || index >= serverPhotos.length) {
+      hasConflict = true;
+      conflictType = "index_out_of_range";
+    }
+  }
+
+  if (!hasConflict) {
+    const photoCount = serverPhotos.length;
+    const baseCount = localDraft.basePhotoCount !== undefined ? localDraft.basePhotoCount : photoCount;
+    if (baseCount !== photoCount) {
+      hasConflict = true;
+      conflictType = "list_changed";
+    }
+  }
+
+  if (!hasConflict) return null;
+
+  return {
+    type: "photos",
+    entityId: localDraft.entityId,
+    draftId: localDraft.id,
+    projectId: localDraft.projectId,
+    stage,
+    operation,
+    conflictType,
+    baseVersion: localDraft.baseVersion,
+    serverVersion: serverProject.version,
+    localSnapshot: {
+      operation,
+      stage,
+      url: localDraft.data.url,
+      index: localDraft.data.index
+    },
+    serverSnapshot: {
+      stage,
+      photos: [...serverPhotos],
+      count: serverPhotos.length
+    },
+    conflicts: [
+      {
+        field: `photos_${stage}`,
+        localValue: { operation, url: localDraft.data.url, index: localDraft.data.index },
+        serverValue: serverPhotos,
+        conflictType
+      }
+    ]
+  };
+}
+
 export function resolveConflict(conflict, resolution, draft, db) {
   const resolvedData = deepClone(draft.data);
 
@@ -144,6 +234,57 @@ export function resolveConflict(conflict, resolution, draft, db) {
   }
 
   return resolvedData;
+}
+
+export function resolvePhotosConflict(conflict, resolution, draft, serverPhotos) {
+  const stage = conflict.stage;
+  const operation = conflict.operation;
+  const serverList = [...serverPhotos];
+
+  if (resolution === "local") {
+    if (operation === "add") {
+      const url = draft.data.url;
+      if (!serverList.includes(url)) {
+        serverList.push(url);
+      }
+    } else if (operation === "delete") {
+      const index = draft.data.index;
+      if (index >= 0 && index < serverList.length) {
+        serverList.splice(index, 1);
+      }
+    }
+    return { photos: serverList, applied: true };
+  }
+
+  if (resolution === "server") {
+    return { photos: serverList, applied: false };
+  }
+
+  if (resolution === "merge") {
+    if (operation === "add") {
+      const url = draft.data.url;
+      if (!serverList.includes(url)) {
+        serverList.push(url);
+      }
+    } else if (operation === "delete") {
+      const url = draft.data.url;
+      if (url) {
+        const idx = serverList.indexOf(url);
+        if (idx !== -1) {
+          serverList.splice(idx, 1);
+        }
+      }
+    }
+    return { photos: serverList, applied: true };
+  }
+
+  if (resolution === "custom" && resolution.fields) {
+    const fieldKey = `photos_${stage}`;
+    const fieldResolution = resolution.fields[fieldKey];
+    return resolvePhotosConflict(conflict, fieldResolution || "server", draft, serverPhotos);
+  }
+
+  return { photos: serverList, applied: false };
 }
 
 export function addToSyncQueue(db, draft, userId) {

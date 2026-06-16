@@ -34,6 +34,7 @@ class ConflictResolver {
     this.queueItemId = queueItemId;
     this.draftId = draftId || null;
     this.resolutions = {};
+    this.photoResolution = 'merge';
     this.render();
   }
 
@@ -44,6 +45,12 @@ class ConflictResolver {
     }
 
     const c = this.conflict;
+    
+    if (c.type === 'photos') {
+      this.renderPhotosConflict(c);
+      return;
+    }
+
     const typeLabel = c.type === 'project' ? '项目信息' : '过程记录';
     const entityTitle = c.localSnapshot?.title || c.localSnapshot?.steps || '未命名';
 
@@ -74,6 +81,145 @@ class ConflictResolver {
 
     this.container.innerHTML = html;
     this.bindEvents();
+  }
+
+  renderPhotosConflict(c) {
+    const stageLabels = { before: '修复前', during: '修复中', after: '修复后' };
+    const stage = stageLabels[c.stage] || c.stage;
+    const op = c.operation === 'add' ? '添加' : '删除';
+    const currentResolution = this.photoResolution || 'merge';
+
+    const serverPhotos = c.serverSnapshot?.photos || [];
+    const localOp = c.localSnapshot || {};
+
+    let html = `
+      <div class="conflict-modal">
+        <div class="conflict-header">
+          <h3>⚠️ 照片同步冲突</h3>
+          <button class="conflict-close" data-action="cancel">×</button>
+        </div>
+        <div class="conflict-summary">
+          <p><strong>操作类型：</strong>${op}${stage}照片</p>
+          <p><strong>冲突原因：</strong>${this.getConflictTypeText(c.conflictType)}</p>
+          <p class="conflict-hint">服务端照片列表已发生变化，请选择处理方式：</p>
+        </div>
+        <div class="conflict-photo-options">
+          <label class="conflict-option ${currentResolution === 'local' ? 'selected' : ''}">
+            <input type="radio" name="photo-resolution" value="local" ${currentResolution === 'local' ? 'checked' : ''}>
+            <div class="conflict-option-content">
+              <div class="conflict-option-title">📝 保留本地操作</div>
+              <div class="conflict-option-desc">强制执行本地的${op}操作，可能覆盖服务端的变化</div>
+            </div>
+          </label>
+          <label class="conflict-option ${currentResolution === 'server' ? 'selected' : ''}">
+            <input type="radio" name="photo-resolution" value="server" ${currentResolution === 'server' ? 'checked' : ''}>
+            <div class="conflict-option-content">
+              <div class="conflict-option-title">☁️ 保留服务端</div>
+              <div class="conflict-option-desc">放弃本地操作，使用服务端的照片列表</div>
+            </div>
+          </label>
+          <label class="conflict-option ${currentResolution === 'merge' ? 'selected' : ''}">
+            <input type="radio" name="photo-resolution" value="merge" ${currentResolution === 'merge' ? 'checked' : ''}>
+            <div class="conflict-option-content">
+              <div class="conflict-option-title">🔀 合并照片列表（推荐）</div>
+              <div class="conflict-option-desc">智能合并本地和服务端的照片，去重保留全部</div>
+            </div>
+          </label>
+        </div>
+        <div class="conflict-photo-preview">
+          <div class="conflict-preview-section">
+            <h4>📋 本地操作</h4>
+            <div class="conflict-preview-content">
+              <p><strong>操作：</strong>${op}</p>
+              ${localOp.url ? `<p><strong>照片链接：</strong><code>${escapeHtml(localOp.url)}</code></p>` : ''}
+              ${localOp.index !== undefined ? `<p><strong>照片索引：</strong>第 ${localOp.index + 1} 张</p>` : ''}
+            </div>
+          </div>
+          <div class="conflict-preview-section">
+            <h4>☁️ 服务端当前 (${serverPhotos.length} 张)</h4>
+            <div class="conflict-preview-content conflict-photo-list">
+              ${serverPhotos.length === 0 ? '<p>暂无照片</p>' : 
+                serverPhotos.map((url, i) => `<div class="conflict-photo-item"><span class="conflict-photo-index">${i + 1}.</span><code>${escapeHtml(url)}</code></div>`).join('')
+              }
+            </div>
+          </div>
+        </div>
+        <div class="conflict-actions">
+          <button class="secondary" data-action="cancel">取消</button>
+          <button class="conflict-submit" data-action="resolve-photo">确认并同步</button>
+        </div>
+      </div>
+    `;
+
+    this.container.innerHTML = html;
+    this.bindPhotoConflictEvents();
+  }
+
+  getConflictTypeText(type) {
+    const typeMap = {
+      'duplicate': '服务端已存在相同的照片',
+      'index_out_of_range': '要删除的照片在服务端不存在',
+      'list_changed': '服务端照片列表已发生变化'
+    };
+    return typeMap[type] || '照片列表存在差异';
+  }
+
+  bindPhotoConflictEvents() {
+    const self = this;
+
+    this.container.querySelectorAll('input[name="photo-resolution"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        self.photoResolution = e.target.value;
+        self.container.querySelectorAll('.conflict-option').forEach(opt => {
+          opt.classList.remove('selected');
+        });
+        e.target.closest('.conflict-option').classList.add('selected');
+      });
+    });
+
+    this.container.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const action = btn.dataset.action;
+        if (action === 'cancel') {
+          self.onCancel();
+        } else if (action === 'resolve-photo') {
+          self.resolvePhoto();
+        }
+      });
+    });
+  }
+
+  async resolvePhoto() {
+    const resolution = this.photoResolution || 'merge';
+    const submitBtn = this.container.querySelector('[data-action="resolve-photo"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '同步中...';
+    submitBtn.disabled = true;
+
+    try {
+      const result = await SyncManager.executeSync(this.queueItemId, resolution, null);
+      if (result.success) {
+        SyncManager.removeFromSyncQueue(this.queueItemId);
+        if (this.draftId) {
+          SyncManager.deleteDraft(this.draftId);
+        }
+        SyncManager.notifyDraftsChanged();
+        this.onResolved({
+          success: true,
+          resolution,
+          entity: result.entity,
+          type: 'photos'
+        });
+      } else {
+        alert(`同步失败：${result.error || '未知错误'}`);
+      }
+    } catch (error) {
+      alert(`同步失败：${error.message}`);
+    } finally {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
   }
 
   renderFieldConflict(fieldConflict, idx) {

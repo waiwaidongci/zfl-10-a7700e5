@@ -18,6 +18,9 @@
   }
 
   function photosApi(path, options) {
+    if (window.SyncManager) {
+      return window.SyncManager.api(path, options);
+    }
     const viewerEl = document.querySelector("#viewer");
     const viewerId = viewerEl ? viewerEl.value : "";
     const headers = { "Content-Type": "application/json" };
@@ -39,7 +42,36 @@
         photosCurrentArchive = { before: [], during: [], after: [] };
       }
       if (!photosCurrentArchive.before) photosCurrentArchive = { before: [], during: [], after: [] };
+
+      if (window.SyncManager) {
+        photosCurrentArchive = sanitizeArchive(
+          window.SyncManager.applyPhotoDraftsToArchive(project.id, photosCurrentArchive)
+        );
+      }
+
       showModal(project);
+    },
+
+    async refresh() {
+      if (!photosCurrentProjectId) return;
+      try {
+        const res = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos");
+        if (!res.error) {
+          photosCurrentArchive = sanitizeArchive(res);
+        }
+      } catch (e) {
+      }
+      if (window.SyncManager) {
+        photosCurrentArchive = sanitizeArchive(
+          window.SyncManager.applyPhotoDraftsToArchive(photosCurrentProjectId, photosCurrentArchive)
+        );
+      }
+      renderBody();
+    },
+
+    setArchive(archive) {
+      photosCurrentArchive = sanitizeArchive(archive);
+      renderBody();
     }
   };
 
@@ -240,9 +272,17 @@
       return;
     }
 
-    photosCurrentArchive = sanitizeArchive(res);
-    if (input) input.value = "";
-    renderBody();
+    if (res._savedAsDraft) {
+      if (!photosCurrentArchive[stage]) photosCurrentArchive[stage] = [];
+      photosCurrentArchive[stage].push(url);
+      if (input) input.value = "";
+      renderBody();
+      alert("网络不可用，照片已保存为本地草稿。恢复连接后可在同步管理中手动同步。");
+    } else {
+      photosCurrentArchive = sanitizeArchive(res);
+      if (input) input.value = "";
+      renderBody();
+    }
 
     if (typeof window.onPhotosUpdated === "function") {
       window.onPhotosUpdated(photosCurrentProjectId);
@@ -252,9 +292,11 @@
   async function deletePhoto(stage, index) {
     if (!confirm("确定删除这张" + STAGE_LABELS[stage] + "照片吗？")) return;
 
+    const url = photosCurrentArchive[stage] && photosCurrentArchive[stage][index];
+
     var res = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos", {
       method: "DELETE",
-      body: JSON.stringify({ stage: stage, index: index })
+      body: JSON.stringify({ stage: stage, index: index, url: url })
     });
 
     if (res.error) {
@@ -262,8 +304,16 @@
       return;
     }
 
-    photosCurrentArchive = sanitizeArchive(res);
-    renderBody();
+    if (res._savedAsDraft) {
+      if (photosCurrentArchive[stage] && index >= 0 && index < photosCurrentArchive[stage].length) {
+        photosCurrentArchive[stage].splice(index, 1);
+      }
+      renderBody();
+      alert("网络不可用，删除操作已保存为本地草稿。恢复连接后可在同步管理中手动同步。");
+    } else {
+      photosCurrentArchive = sanitizeArchive(res);
+      renderBody();
+    }
 
     if (typeof window.onPhotosUpdated === "function") {
       window.onPhotosUpdated(photosCurrentProjectId);

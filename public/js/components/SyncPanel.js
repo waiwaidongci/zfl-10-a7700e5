@@ -91,7 +91,8 @@ class SyncPanel {
 
     const draftsByType = {
       project: this.drafts.filter(d => d.type === 'project'),
-      timeline: this.drafts.filter(d => d.type === 'timeline')
+      timeline: this.drafts.filter(d => d.type === 'timeline'),
+      photos: this.drafts.filter(d => d.type === 'photos')
     };
 
     let html = '<div class="sync-drafts-list">';
@@ -106,6 +107,11 @@ class SyncPanel {
       html += draftsByType.timeline.map(d => this.renderDraftItem(d)).join('');
     }
 
+    if (draftsByType.photos.length > 0) {
+      html += '<h4>📷 照片归档草稿</h4>';
+      html += draftsByType.photos.map(d => this.renderDraftItem(d)).join('');
+    }
+
     html += '</div>';
     return html;
   }
@@ -114,7 +120,17 @@ class SyncPanel {
     const isQueued = this.queue.some(q => q.draftId === draft.id);
     const statusClass = draft.status === 'failed' ? 'failed' : (isQueued ? 'queued' : 'pending');
     const statusText = draft.status === 'failed' ? '同步失败' : (isQueued ? '等待同步' : '待同步');
-    const title = draft.data?.title || draft.data?.steps || '未命名草稿';
+    
+    let title = '未命名草稿';
+    if (draft.type === 'photos') {
+      const stageLabels = { before: '修复前', during: '修复中', after: '修复后' };
+      const stage = stageLabels[draft.data?.stage] || draft.data?.stage || '';
+      const op = draft.operation === 'add' ? '添加' : '删除';
+      title = `${op}${stage}照片`;
+    } else {
+      title = draft.data?.title || draft.data?.steps || '未命名草稿';
+    }
+    
     const timeAgo = this.getTimeAgo(draft.updatedAt);
 
     return `
@@ -122,7 +138,7 @@ class SyncPanel {
         <div class="sync-draft-main">
           <div class="sync-draft-title">${escapeHtml(title)}</div>
           <div class="sync-draft-meta">
-            <span class="sync-draft-op">${draft.operation === 'create' ? '新建' : '更新'}</span>
+            <span class="sync-draft-op">${this.getOperationLabel(draft)}</span>
             <span class="sync-draft-time">${timeAgo}</span>
             ${draft.lastSyncError ? `<span class="sync-draft-error" title="${escapeHtml(draft.lastSyncError)}">❌ ${escapeHtml(draft.lastSyncError.slice(0, 30))}…</span>` : ''}
           </div>
@@ -139,6 +155,15 @@ class SyncPanel {
         </div>
       </div>
     `;
+  }
+
+  getOperationLabel(draft) {
+    if (draft.type === 'photos') {
+      return draft.operation === 'add' ? '添加照片' : '删除照片';
+    }
+    if (draft.operation === 'create') return '新建';
+    if (draft.operation === 'delete') return '删除';
+    return '更新';
   }
 
   getTimeAgo(dateStr) {

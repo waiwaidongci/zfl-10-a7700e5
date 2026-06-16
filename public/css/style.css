@@ -4010,6 +4010,128 @@ nav.tabs a.active {
   font-size: 14px;
 }
 
+.conflict-photo-options {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conflict-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #fff;
+}
+
+.conflict-option:hover {
+  border-color: var(--accent);
+  background: #f5fafb;
+}
+
+.conflict-option.selected {
+  border-color: var(--accent);
+  background: #e6f0f2;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.conflict-option input[type="radio"] {
+  width: auto;
+  margin-top: 2px;
+}
+
+.conflict-option-content {
+  flex: 1;
+}
+
+.conflict-option-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.conflict-option-desc {
+  font-size: 12px;
+  color: #6b6258;
+  line-height: 1.5;
+}
+
+.conflict-photo-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--line);
+  background: #faf7f0;
+}
+
+.conflict-preview-section {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.conflict-preview-section h4 {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  background: #f5f0e5;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.conflict-preview-content {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #5d574e;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.conflict-preview-content p {
+  margin: 4px 0;
+}
+
+.conflict-preview-content code {
+  background: #f5f0e5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.conflict-photo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.conflict-photo-item {
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--line);
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.conflict-photo-item:last-child {
+  border-bottom: none;
+}
+
+.conflict-photo-index {
+  color: #8a8278;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
 @media (max-width: 600px) {
   .header-right {
     flex-direction: column;
@@ -4032,6 +4154,10 @@ nav.tabs a.active {
 
   .conflict-actions button {
     width: 100%;
+  }
+
+  .conflict-photo-preview {
+    grid-template-columns: 1fr;
   }
 
   .sync-draft-item {

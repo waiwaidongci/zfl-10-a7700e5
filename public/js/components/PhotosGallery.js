@@ -60,6 +60,9 @@
 
     _api(path, opts) {
       if (!this.projectId) return Promise.reject(new Error("No projectId"));
+      if (window.SyncManager) {
+        return window.SyncManager.api(path, opts);
+      }
       const viewerEl = document.querySelector("#viewer");
       const viewerId = viewerEl ? viewerEl.value : "";
       const headers = { "Content-Type": "application/json" };
@@ -207,7 +210,13 @@
             alert(res.message || "添加失败");
             return;
           }
-          this.archive = sanitizeArchive(res);
+          if (res._savedAsDraft) {
+            if (!this.archive[stage]) this.archive[stage] = [];
+            this.archive[stage].push(url);
+            alert("网络不可用，照片已保存为本地草稿。恢复连接后可在同步管理中手动同步。");
+          } else {
+            this.archive = sanitizeArchive(res);
+          }
         } catch (e) {
           alert("添加失败: " + e.message);
           return;
@@ -225,17 +234,26 @@
     async deletePhoto(stage, index) {
       if (!confirm("确定删除这张" + STAGE_LABELS[stage] + "照片吗？")) return;
 
+      const url = this.archive[stage] && this.archive[stage][index];
+
       if (this.projectId) {
         try {
           const res = await this._api("/api/projects/" + this.projectId + "/photos", {
             method: "DELETE",
-            body: JSON.stringify({ stage: stage, index: index })
+            body: JSON.stringify({ stage: stage, index: index, url: url })
           });
           if (res.error) {
             alert(res.message || "删除失败");
             return;
           }
-          this.archive = sanitizeArchive(res);
+          if (res._savedAsDraft) {
+            if (this.archive[stage] && index >= 0 && index < this.archive[stage].length) {
+              this.archive[stage].splice(index, 1);
+            }
+            alert("网络不可用，删除操作已保存为本地草稿。恢复连接后可在同步管理中手动同步。");
+          } else {
+            this.archive = sanitizeArchive(res);
+          }
         } catch (e) {
           alert("删除失败: " + e.message);
           return;

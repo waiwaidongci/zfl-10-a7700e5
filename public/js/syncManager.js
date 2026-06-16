@@ -103,6 +103,15 @@ window.SyncManager = {
       const recordId = deleteMatch[2];
       return this.saveTimelineDeleteDraft(projectId, recordId);
     }
+    const photosMatch = path.match(/^\/api\/projects\/([^/]+)\/photos$/);
+    if (photosMatch && options.method === 'POST') {
+      const projectId = photosMatch[1];
+      return this.savePhotoAddDraft(projectId, body.stage, body.url);
+    }
+    if (photosMatch && options.method === 'DELETE') {
+      const projectId = photosMatch[1];
+      return this.savePhotoDeleteDraft(projectId, body.stage, body.index, body.url);
+    }
     throw new Error('网络不可用，且该操作不支持离线保存');
   },
 
@@ -263,6 +272,102 @@ window.SyncManager = {
 
     this.saveDraft(draft);
     return { _savedAsDraft: true, draftId, operation: 'delete' };
+  },
+
+  async savePhotoAddDraft(projectId, stage, url) {
+    const draftId = `D-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const draft = {
+      id: draftId,
+      type: 'photos',
+      entityType: 'photos',
+      operation: 'add',
+      entityId: `${projectId}-${stage}`,
+      projectId,
+      data: { stage, url },
+      baseVersion: 1,
+      createdBy: this.getCurrentUserId(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'pending',
+      syncAttempts: 0,
+      lastSyncError: null,
+      isLocal: true
+    };
+
+    this.saveDraft(draft);
+
+    return {
+      _savedAsDraft: true,
+      draftId,
+      operation: 'add',
+      stage,
+      url
+    };
+  },
+
+  async savePhotoDeleteDraft(projectId, stage, index, url) {
+    const draftId = `D-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const draft = {
+      id: draftId,
+      type: 'photos',
+      entityType: 'photos',
+      operation: 'delete',
+      entityId: `${projectId}-${stage}`,
+      projectId,
+      data: { stage, index, url },
+      baseVersion: 1,
+      createdBy: this.getCurrentUserId(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'pending',
+      syncAttempts: 0,
+      lastSyncError: null,
+      isLocal: true
+    };
+
+    this.saveDraft(draft);
+
+    return {
+      _savedAsDraft: true,
+      draftId,
+      operation: 'delete',
+      stage,
+      index,
+      url
+    };
+  },
+
+  getPhotoDrafts(projectId) {
+    const drafts = this.getDrafts().filter(d => d.type === 'photos' && d.projectId === projectId);
+    return drafts;
+  },
+
+  applyPhotoDraftsToArchive(projectId, serverArchive) {
+    const archive = {
+      before: [...(serverArchive?.before || [])],
+      during: [...(serverArchive?.during || [])],
+      after: [...(serverArchive?.after || [])]
+    };
+
+    const drafts = this.getPhotoDrafts(projectId)
+      .filter(d => d.status === 'pending')
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    for (const draft of drafts) {
+      const stage = draft.data.stage;
+      if (!archive[stage]) archive[stage] = [];
+
+      if (draft.operation === 'add') {
+        archive[stage].push(draft.data.url);
+      } else if (draft.operation === 'delete') {
+        const idx = draft.data.index;
+        if (idx >= 0 && idx < archive[stage].length) {
+          archive[stage].splice(idx, 1);
+        }
+      }
+    }
+
+    return archive;
   },
 
   getCurrentUserId() {
@@ -517,8 +622,8 @@ window.SyncManager = {
   },
 
   mergeProjectsWithDrafts(projects) {
-    const drafts = this.getDrafts().filter(d => d.type === 'project' && d.operation === 'create');
-    const draftProjects = drafts.map(d => ({
+    const projectDrafts = this.getDrafts().filter(d => d.type === 'project' && d.operation === 'create');
+    const draftProjects = projectDrafts.map(d => ({
       ...d.data,
       id: d.id,
       version: d.baseVersion,
@@ -531,7 +636,13 @@ window.SyncManager = {
       _isDraft: true,
       _draftId: d.id
     }));
-    return [...draftProjects, ...projects];
+
+    const mergedProjects = [...draftProjects, ...projects].map(p => {
+      const updatedArchive = this.applyPhotoDraftsToArchive(p.id, p.photoArchive);
+      return { ...p, photoArchive: updatedArchive };
+    });
+
+    return mergedProjects;
   }
 };
 

@@ -1,5 +1,8 @@
 import { parseBody, saveDb, sendJson } from "../db.js";
 import { getViewer } from "../utils/permissions.js";
+import { incrementVersion } from "../utils/sync.js";
+import { recordAudit, ACTION_TYPES, SOURCES } from "../utils/audit.js";
+import { deepClone } from "../utils/diff.js";
 
 const VALID_STAGES = ["before", "during", "after"];
 
@@ -43,8 +46,22 @@ export async function handlePhotos(req, res, db, pathname) {
       return sendJson(res, 400, { error: "invalid_url", message: "照片链接格式不正确" });
     }
 
+    const beforeState = deepClone(project);
     project.photoArchive[stage].push(url.trim());
+    incrementVersion(project);
     project.updatedAt = new Date().toISOString().slice(0, 10);
+
+    recordAudit(db, {
+      projectId,
+      actionType: ACTION_TYPES.PROJECT_UPDATE,
+      operator: viewer.name,
+      operatorId: viewerId,
+      source: SOURCES.API,
+      beforeState,
+      afterState: deepClone(project),
+      note: `添加${stage === "before" ? "修复前" : stage === "during" ? "修复中" : "修复后"}照片`
+    });
+
     await saveDb(db);
     return sendJson(res, 201, project.photoArchive);
   }
@@ -60,8 +77,22 @@ export async function handlePhotos(req, res, db, pathname) {
       return sendJson(res, 400, { error: "invalid_index", message: "照片索引无效" });
     }
 
+    const beforeState = deepClone(project);
     project.photoArchive[stage].splice(index, 1);
+    incrementVersion(project);
     project.updatedAt = new Date().toISOString().slice(0, 10);
+
+    recordAudit(db, {
+      projectId,
+      actionType: ACTION_TYPES.PROJECT_UPDATE,
+      operator: viewer.name,
+      operatorId: viewerId,
+      source: SOURCES.API,
+      beforeState,
+      afterState: deepClone(project),
+      note: `删除${stage === "before" ? "修复前" : stage === "during" ? "修复中" : "修复后"}照片（第 ${index + 1} 张）`
+    });
+
     await saveDb(db);
     return sendJson(res, 200, project.photoArchive);
   }

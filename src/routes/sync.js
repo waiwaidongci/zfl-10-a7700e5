@@ -7,9 +7,12 @@ import { validateMaterialUsages, checkStockSufficiency, consumeMaterials, restor
 import {
   createProjectDraft,
   createTimelineDraft,
+  createPhotoDraft,
   detectProjectConflict,
   detectTimelineConflict,
+  detectPhotosConflict,
   resolveConflict,
+  resolvePhotosConflict,
   addToSyncQueue,
   removeFromSyncQueue,
   getPendingSyncItems,
@@ -74,6 +77,8 @@ export async function handleSync(req, res, db, pathname) {
     } else if (type === "timeline" && projectId) {
       const sanitized = sanitizeTimelineInput(data);
       draft = createTimelineDraft(projectId, sanitized, viewerId);
+    } else if (type === "photos" && projectId) {
+      draft = createPhotoDraft(projectId, data, viewerId);
     } else {
       return sendJson(res, 400, { error: "invalid_draft_type" });
     }
@@ -189,6 +194,10 @@ export async function handleSync(req, res, db, pathname) {
         const project = db.projects.find(p => p.id === draft.projectId);
         const conflict = detectTimelineConflict(draft, project?.timelineRecords);
         if (conflict) conflicts.push(conflict);
+      } else if (draft.type === "photos") {
+        const project = db.projects.find(p => p.id === draft.projectId);
+        const conflict = detectPhotosConflict(draft, project);
+        if (conflict) conflicts.push(conflict);
       }
     }
 
@@ -220,6 +229,9 @@ export async function handleSync(req, res, db, pathname) {
     } else if (queueItem.type === "timeline") {
       const project = db.projects.find(p => p.id === queueItem.projectId);
       conflict = detectTimelineConflict(draft, project?.timelineRecords);
+    } else if (queueItem.type === "photos") {
+      const project = db.projects.find(p => p.id === queueItem.projectId);
+      conflict = detectPhotosConflict(draft, project);
     }
 
     if (conflict && !resolution) {
@@ -235,6 +247,8 @@ export async function handleSync(req, res, db, pathname) {
       resultData = await syncProject(db, queueItem, draft, conflict, resolution, resolutionFields, viewer);
     } else if (queueItem.type === "timeline") {
       resultData = await syncTimeline(db, queueItem, draft, conflict, resolution, resolutionFields, viewer);
+    } else if (queueItem.type === "photos") {
+      resultData = await syncPhotos(db, queueItem, draft, conflict, resolution, resolutionFields, viewer);
     }
 
     if (resultData.success) {
@@ -518,6 +532,64 @@ async function syncTimeline(db, queueItem, draft, conflict, resolution, resoluti
     });
 
     return { success: true, entity: record, restoredMovements };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function syncPhotos(db, queueItem, draft, conflict, resolution, resolutionFields, viewer) {
+  try {
+    const project = db.projects.find(p => p.id === queueItem.projectId);
+    if (!project) return { success: false, error: "project_not_found" };
+
+    if (!project.photoArchive) {
+      project.photoArchive = { before: [], during: [], after: [] };
+    }
+
+    const stage = draft.data.stage;
+    const operation = draft.operation;
+    const beforeState = deepClone(project);
+
+    let serverPhotos = [...(project.photoArchive[stage] || [])];
+
+    if (conflict) {
+      const res = resolution === "custom" ? { fields: resolutionFields } : resolution;
+      const resolved = resolvePhotosConflict(conflict, res, draft, serverPhotos);
+      serverPhotos = resolved.photos;
+    } else {
+      if (operation === "add") {
+        const url = draft.data.url;
+        if (!serverPhotos.includes(url)) {
+          serverPhotos.push(url);
+        }
+      } else if (operation === "delete") {
+        const index = draft.data.index;
+        if (index >= 0 && index < serverPhotos.length) {
+          serverPhotos.splice(index, 1);
+        }
+      }
+    }
+
+    project.photoArchive[stage] = serverPhotos;
+    incrementVersion(project);
+    project.updatedAt = new Date().toISOString().slice(0, 10);
+
+    const note = conflict
+      ? `同步${operation === "add" ? "添加" : "删除"}照片（已解决冲突）`
+      : `同步${operation === "add" ? "添加" : "删除"}照片`;
+
+    recordAudit(db, {
+      projectId: project.id,
+      actionType: ACTION_TYPES.PROJECT_UPDATE,
+      operator: viewer.name,
+      operatorId: viewer.id,
+      source: SOURCES.SYNC,
+      beforeState,
+      afterState: deepClone(project),
+      note
+    });
+
+    return { success: true, entity: { stage, photoArchive: project.photoArchive } };
   } catch (error) {
     return { success: false, error: error.message };
   }

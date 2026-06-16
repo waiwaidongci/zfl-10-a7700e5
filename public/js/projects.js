@@ -530,6 +530,9 @@ window.onTimelineUpdated = async (projectId) => {
 
 window.onPhotosUpdated = async (projectId) => {
   projects = await api("/api/projects");
+  if (window.SyncManager) {
+    projects = window.SyncManager.mergeProjectsWithDrafts(projects);
+  }
   render();
   if (expandedProjectId === projectId) {
     initDetailView(expandedProjectId);
@@ -538,6 +541,9 @@ window.onPhotosUpdated = async (projectId) => {
 
 window.onAuditRollback = async (projectId) => {
   projects = await api("/api/projects");
+  if (window.SyncManager) {
+    projects = window.SyncManager.mergeProjectsWithDrafts(projects);
+  }
   render();
   if (expandedProjectId === projectId) {
     initDetailView(expandedProjectId);
@@ -672,9 +678,17 @@ function initSyncComponents() {
       conflictModal.style.display = 'none';
       alert('同步成功！');
       if (typeof window.onSyncComplete === 'function') {
-        window.onSyncComplete();
+        window.onSyncComplete(result);
       }
       await load();
+      if (result?.type === 'photos' && expandedProjectId) {
+        if (window.Photos) {
+          window.Photos.refresh();
+        }
+        if (typeof window.onPhotosUpdated === 'function') {
+          window.onPhotosUpdated(expandedProjectId);
+        }
+      }
     },
     onCancel: () => {
       conflictModal.style.display = 'none';
