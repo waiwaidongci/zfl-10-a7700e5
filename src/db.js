@@ -68,6 +68,8 @@ function validateDbStructure(db) {
     errors.push("syncQueue 字段缺失或不是数组");
   if (!Array.isArray(db.materialMovements))
     errors.push("materialMovements 字段缺失或不是数组");
+  if (!Array.isArray(db.reportSnapshots))
+    errors.push("reportSnapshots 字段缺失或不是数组");
   return errors;
 }
 
@@ -83,6 +85,7 @@ const seed = {
   ],
   offlineDrafts: [],
   syncQueue: [],
+  reportSnapshots: [],
   intakes: [
     { id: "I-001", title: "宋版文选残卷", era: "宋代", source: "私人捐赠", receiver: "顾眉", receivedAt: "2026-06-10", damage: "封面缺失、书页霉斑", tempLocation: "A柜-3层", status: "待修复", createdAt: "2026-06-10", projectId: null },
     { id: "I-002", title: "民国线装诗集", era: "民国", source: "图书馆移交", receiver: "严澈", receivedAt: "2026-06-12", damage: "书脊开裂、部分页脱胶", tempLocation: "B柜-1层", status: "待修复", createdAt: "2026-06-12", projectId: null }
@@ -159,6 +162,7 @@ export async function loadDb() {
         createdAt: tpl.createdAt
       });
     }
+    initialDb.reportSnapshots = [];
     initialDb._meta = { schemaVersion: 5, migrations: [{ version: 2, appliedAt: new Date().toISOString() }, { version: 3, appliedAt: new Date().toISOString() }, { version: 4, appliedAt: new Date().toISOString() }, { version: 5, appliedAt: new Date().toISOString() }] };
     for (const project of initialDb.projects) {
       project.templateSnapshot = null;
@@ -189,7 +193,7 @@ export async function loadDb() {
 
   let changed = false;
 
-  const requiredCollections = ["users", "projects", "intakes", "materials", "materialMovements", "offlineDrafts", "syncQueue"];
+  const requiredCollections = ["users", "projects", "intakes", "materials", "materialMovements", "offlineDrafts", "syncQueue", "reportSnapshots"];
   for (const key of requiredCollections) {
     if (!(key in db) || !Array.isArray(db[key])) {
       if (db[key] === undefined || db[key] === null) {
@@ -287,7 +291,7 @@ export async function saveDb(db) {
       const existingData = await readFile(dbPath, "utf8");
       const existingDb = JSON.parse(existingData);
 
-      const protectCollections = ["projects", "templates", "users", "intakes", "materials", "materialMovements", "auditLogs", "offlineDrafts", "syncQueue"];
+      const protectCollections = ["projects", "templates", "users", "intakes", "materials", "materialMovements", "auditLogs", "offlineDrafts", "syncQueue", "reportSnapshots"];
       for (const col of protectCollections) {
         const oldLen = Array.isArray(existingDb[col]) ? existingDb[col].length : 0;
         const newLen = Array.isArray(db[col]) ? db[col].length : 0;

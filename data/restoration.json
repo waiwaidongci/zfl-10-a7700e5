@@ -358,14 +358,14 @@
     },
     {
       "id": "R-001",
-      "title": "明代族谱散页（本地修改）",
+      "title": "明代族谱散页（修订版）",
       "era": "明代",
-      "damage": "虫蛀、边角缺失、封面损坏",
+      "damage": "已修复-无明显损坏",
       "steps": "清洁、补纸、压平",
       "materials": "楮皮纸、小麦淀粉浆",
       "owner": "顾眉",
       "dueDate": "2026-06-22",
-      "status": "待复核",
+      "status": "已完成",
       "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
       "updatedAt": "2026-06-16",
       "reviewRecords": [],
@@ -384,6 +384,21 @@
           "createdAt": "2026-06-15T05:37:23.899Z",
           "version": 1,
           "materialUsages": []
+        },
+        {
+          "id": "T-1781615423551-0m98td",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-16",
+          "steps": "状态自动流转",
+          "materials": "",
+          "notes": "",
+          "photoUrl": "",
+          "systemMessage": "状态变更：待复核 → 已完成",
+          "materialUsages": [],
+          "createdAt": "2026-06-16T13:10:23.551Z",
+          "version": 1
         }
       ],
       "photoArchive": {
@@ -397,7 +412,7 @@
         "after": []
       },
       "templateSnapshot": null,
-      "version": 4
+      "version": 6
     },
     {
       "id": "R-002",
@@ -1029,7 +1044,7 @@
     }
   ],
   "_meta": {
-    "schemaVersion": 6,
+    "schemaVersion": 7,
     "migrations": [
       {
         "version": 2,
@@ -1054,10 +1069,110 @@
         "version": 6,
         "appliedAt": "2026-06-15T23:45:22.153Z",
         "status": "success"
+      },
+      {
+        "version": 7,
+        "appliedAt": "2026-06-16T13:09:42.016Z",
+        "status": "success"
       }
     ]
   },
   "auditLogs": [
+    {
+      "id": "AUD-1781615453997-0nham5",
+      "projectId": "R-001",
+      "actionType": "project_update",
+      "actionLabel": "修改项目",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "api",
+      "timestamp": "2026-06-16T13:10:53.997Z",
+      "beforeState": {
+        "title": "明代族谱散页（本地修改）",
+        "era": "明代",
+        "damage": "虫蛀、边角缺失、封面损坏",
+        "steps": "清洁、补纸、压平",
+        "materials": "楮皮纸、小麦淀粉浆",
+        "owner": "顾眉",
+        "dueDate": "2026-06-22",
+        "status": "已完成",
+        "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f"
+      },
+      "afterState": {
+        "title": "明代族谱散页（修订版）",
+        "era": "明代",
+        "damage": "已修复-无明显损坏",
+        "steps": "清洁、补纸、压平",
+        "materials": "楮皮纸、小麦淀粉浆",
+        "owner": "顾眉",
+        "dueDate": "2026-06-22",
+        "status": "已完成",
+        "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f"
+      },
+      "changes": [
+        {
+          "field": "title",
+          "label": "藏品名称",
+          "oldValue": "明代族谱散页（本地修改）",
+          "newValue": "明代族谱散页（修订版）",
+          "type": "modify"
+        },
+        {
+          "field": "damage",
+          "label": "破损情况",
+          "oldValue": "虫蛀、边角缺失、封面损坏",
+          "newValue": "已修复-无明显损坏",
+          "type": "modify"
+        }
+      ],
+      "summary": "2 个字段变更：藏品名称、破损情况",
+      "note": "",
+      "relatedId": null
+    },
+    {
+      "id": "AUD-1781615423551-rrf788",
+      "projectId": "R-001",
+      "actionType": "status_change",
+      "actionLabel": "状态变更",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "api",
+      "timestamp": "2026-06-16T13:10:23.551Z",
+      "beforeState": {
+        "title": "明代族谱散页（本地修改）",
+        "era": "明代",
+        "damage": "虫蛀、边角缺失、封面损坏",
+        "steps": "清洁、补纸、压平",
+        "materials": "楮皮纸、小麦淀粉浆",
+        "owner": "顾眉",
+        "dueDate": "2026-06-22",
+        "status": "待复核",
+        "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f"
+      },
+      "afterState": {
+        "title": "明代族谱散页（本地修改）",
+        "era": "明代",
+        "damage": "虫蛀、边角缺失、封面损坏",
+        "steps": "清洁、补纸、压平",
+        "materials": "楮皮纸、小麦淀粉浆",
+        "owner": "顾眉",
+        "dueDate": "2026-06-22",
+        "status": "已完成",
+        "photos": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f"
+      },
+      "changes": [
+        {
+          "field": "status",
+          "label": "状态",
+          "oldValue": "待复核",
+          "newValue": "已完成",
+          "type": "modify"
+        }
+      ],
+      "summary": "状态：待复核 → 已完成",
+      "note": "",
+      "relatedId": null
+    },
     {
       "id": "AUD-1781614268445-nitwem",
       "projectId": "R-1781488785089",
@@ -1940,6 +2055,71 @@
       "operatorId": "u-admin",
       "note": "修复过程消耗",
       "createdAt": "2026-06-15T23:47:36.477Z"
+    }
+  ],
+  "reportSnapshots": [
+    {
+      "id": "RS-R-001-mqgnu0hj-podhof",
+      "projectId": "R-001",
+      "snapshotName": "初始归档版本",
+      "note": "第一次测试归档",
+      "archivedBy": "管理员",
+      "archivedById": "u-admin",
+      "archivedAt": "2026-06-16T13:10:41.143Z",
+      "projectVersion": 5,
+      "data": {
+        "project": {
+          "id": "R-001",
+          "title": "明代族谱散页（本地修改）",
+          "era": "明代",
+          "owner": "顾眉",
+          "status": "已完成",
+          "dueDate": "2026-06-22",
+          "updatedAt": "2026-06-16",
+          "completionDate": "2026-06-16"
+        },
+        "artifact": {
+          "title": "明代族谱散页（本地修改）",
+          "era": "明代",
+          "damage": "虫蛀、边角缺失、封面损坏"
+        },
+        "restoration": {
+          "steps": "清洁、补纸、压平",
+          "materials": "楮皮纸、小麦淀粉浆"
+        },
+        "template": null,
+        "reviewRequirements": "",
+        "process": {
+          "records": [],
+          "hasRecords": false,
+          "totalRecords": 0
+        },
+        "photos": {
+          "archive": {
+            "before": [
+              "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+              "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
+            ],
+            "during": [
+              "https://images.unsplash.com/photo-1466442929976-97f336a657be"
+            ],
+            "after": []
+          },
+          "total": 3,
+          "hasPhotos": true,
+          "beforeCount": 2,
+          "duringCount": 1,
+          "afterCount": 0
+        },
+        "reviews": {
+          "records": [],
+          "hasReviews": false,
+          "totalReviews": 0,
+          "lastReview": null,
+          "lastRejection": null
+        },
+        "generatedAt": "2026-06-16T13:10:41.142Z"
+      }
     }
   ]
 }

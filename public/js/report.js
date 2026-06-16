@@ -1,5 +1,9 @@
 (function() {
   const viewerSelect = document.querySelector("#viewer");
+  let currentView = "current";
+  let snapshotList = [];
+  let currentSnapshotData = null;
+  let currentReportData = null;
 
   function escapeHtml(s) {
     return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -29,6 +33,14 @@
     const d = new Date(isoString);
     if (isNaN(d.getTime())) return isoString;
     return d.toISOString().slice(0, 10);
+  }
+
+  function formatDateTime(isoString) {
+    if (!isoString) return "-";
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   function showLoading() {
@@ -216,7 +228,18 @@
     wrap.innerHTML = html;
   }
 
-  function renderReport(data) {
+  function renderReport(data, snapshotMeta) {
+    const badge = document.getElementById("reportBadge");
+    if (snapshotMeta) {
+      badge.style.display = "inline-block";
+      badge.className = "report-badge snapshot-badge";
+      badge.textContent = "📦 快照版本";
+    } else {
+      badge.style.display = "inline-block";
+      badge.className = "report-badge current-badge";
+      badge.textContent = "实时报告";
+    }
+
     document.getElementById("reportMeta").textContent = data.project.id + " · " + data.project.title;
 
     document.getElementById("reportId").textContent = data.project.id;
@@ -254,9 +277,158 @@
         showError(data.message || "加载报告失败：" + data.error);
         return;
       }
-      renderReport(data);
+      currentReportData = data;
+      renderReport(data, null);
+      await loadSnapshotList();
     } catch (e) {
       showError("网络错误：" + e.message);
+    }
+  }
+
+  async function loadSnapshotList() {
+    const projectId = getProjectId();
+    if (!projectId) return;
+
+    try {
+      const data = await api("/api/projects/" + encodeURIComponent(projectId) + "/report-snapshots");
+      if (data && data.snapshots) {
+        snapshotList = data.snapshots;
+        updateSnapshotSelect();
+        updateSwitcherVisibility();
+      }
+    } catch (e) {
+      console.warn("加载快照列表失败:", e);
+    }
+  }
+
+  function updateSnapshotSelect() {
+    const select = document.getElementById("snapshotSelect");
+    const options = ['<option value="">-- 请选择历史快照 --</option>'];
+    snapshotList.forEach(function(s) {
+      const label = `${s.snapshotName} (${formatDateTime(s.archivedAt)} · ${s.archivedBy})`;
+      options.push(`<option value="${escapeHtml(s.id)}">${escapeHtml(label)}</option>`);
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function updateSwitcherVisibility() {
+    const switcher = document.getElementById("reportSwitcher");
+    if (snapshotList.length > 0) {
+      switcher.style.display = "flex";
+    } else {
+      switcher.style.display = "none";
+    }
+  }
+
+  function switchView(view) {
+    currentView = view;
+    document.querySelectorAll(".report-tab").forEach(function(tab) {
+      if (tab.dataset.view === view) {
+        tab.classList.add("active");
+      } else {
+        tab.classList.remove("active");
+      }
+    });
+
+    const snapshotSelectWrap = document.getElementById("snapshotSelectWrap");
+    const snapshotInfo = document.getElementById("snapshotInfo");
+
+    if (view === "current") {
+      snapshotSelectWrap.style.display = "none";
+      snapshotInfo.style.display = "none";
+      document.getElementById("archiveBtn").style.display = "";
+      if (currentReportData) {
+        renderReport(currentReportData, null);
+      }
+    } else {
+      snapshotSelectWrap.style.display = "block";
+      snapshotInfo.style.display = "none";
+      document.getElementById("archiveBtn").style.display = "none";
+      const selectedId = document.getElementById("snapshotSelect").value;
+      if (selectedId) {
+        loadAndRenderSnapshot(selectedId);
+      }
+    }
+  }
+
+  async function loadAndRenderSnapshot(snapshotId) {
+    const projectId = getProjectId();
+    if (!projectId || !snapshotId) return;
+
+    showLoading();
+    const snapshotInfo = document.getElementById("snapshotInfo");
+
+    try {
+      const data = await api(
+        "/api/projects/" + encodeURIComponent(projectId) + "/report-snapshots/" + encodeURIComponent(snapshotId)
+      );
+      if (data.error) {
+        showError(data.message || "加载快照失败：" + data.error);
+        return;
+      }
+      currentSnapshotData = data;
+      renderReport(data.data, data);
+      snapshotInfo.style.display = "block";
+      snapshotInfo.innerHTML =
+        '<span class="snapshot-info-badge">📦 ' + escapeHtml(data.snapshotName) + '</span>' +
+        '<span>归档人：' + escapeHtml(data.archivedBy) + '</span>' +
+        '<span>归档时间：' + escapeHtml(formatDateTime(data.archivedAt)) + '</span>' +
+        (data.note ? '<span class="snapshot-note">备注：' + escapeHtml(data.note) + '</span>' : '');
+    } catch (e) {
+      showError("网络错误：" + e.message);
+    }
+  }
+
+  function showArchiveModal() {
+    const modal = document.getElementById("archiveModal");
+    document.getElementById("snapshotName").value = `报告快照 ${new Date().toISOString().slice(0, 10)}`;
+    document.getElementById("snapshotNote").value = "";
+    modal.style.display = "flex";
+  }
+
+  function hideArchiveModal() {
+    document.getElementById("archiveModal").style.display = "none";
+  }
+
+  async function confirmArchive() {
+    const projectId = getProjectId();
+    if (!projectId) return;
+
+    const name = document.getElementById("snapshotName").value.trim();
+    const note = document.getElementById("snapshotNote").value.trim();
+
+    if (!name) {
+      alert("请填写快照名称");
+      return;
+    }
+
+    const confirmBtn = document.getElementById("archiveConfirmBtn");
+    const originalText = confirmBtn.textContent;
+    confirmBtn.textContent = "归档中...";
+    confirmBtn.disabled = true;
+
+    try {
+      const result = await api(
+        "/api/projects/" + encodeURIComponent(projectId) + "/report-snapshots",
+        {
+          method: "POST",
+          body: JSON.stringify({ name: name, note: note })
+        }
+      );
+
+      if (result.error) {
+        alert(result.message || "归档失败：" + result.error);
+        return;
+      }
+
+      alert("✅ 报告快照归档成功！");
+      hideArchiveModal();
+      await loadSnapshotList();
+    } catch (e) {
+      alert("网络错误：" + e.message);
+    } finally {
+      confirmBtn.textContent = originalText;
+      confirmBtn.disabled = false;
     }
   }
 
@@ -270,7 +442,41 @@
     };
 
     document.getElementById("retryBtn").onclick = function() {
-      loadReport();
+      if (currentView === "current") {
+        loadReport();
+      } else {
+        const selectedId = document.getElementById("snapshotSelect").value;
+        if (selectedId) loadAndRenderSnapshot(selectedId);
+      }
+    };
+
+    document.getElementById("archiveBtn").onclick = function() {
+      showArchiveModal();
+    };
+
+    document.getElementById("archiveModalClose").onclick = hideArchiveModal;
+    document.getElementById("archiveCancelBtn").onclick = hideArchiveModal;
+    document.getElementById("archiveConfirmBtn").onclick = confirmArchive;
+
+    document.querySelectorAll(".report-tab").forEach(function(tab) {
+      tab.onclick = function() {
+        switchView(tab.dataset.view);
+      };
+    });
+
+    document.getElementById("snapshotSelect").onchange = function(e) {
+      const value = e.target.value;
+      if (value) {
+        loadAndRenderSnapshot(value);
+      } else {
+        document.getElementById("snapshotInfo").style.display = "none";
+      }
+    };
+
+    document.getElementById("archiveModal").onclick = function(e) {
+      if (e.target === this) {
+        hideArchiveModal();
+      }
     };
   }
 

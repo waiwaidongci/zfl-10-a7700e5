@@ -14,9 +14,25 @@
     </div>
     <div class="report-header-actions">
       <button id="backBtn" class="secondary">← 返回项目列表</button>
+      <button id="archiveBtn">📦 归档报告快照</button>
       <button id="printBtn">🖨️ 打印报告</button>
     </div>
   </header>
+
+  <div class="report-switcher no-print" id="reportSwitcher" style="display:none;">
+    <div class="report-switcher-label">报告版本：</div>
+    <div class="report-switcher-tabs">
+      <button class="report-tab active" data-view="current">当前报告</button>
+      <button class="report-tab" data-view="snapshot">历史快照</button>
+    </div>
+    <div class="report-snapshot-select" id="snapshotSelectWrap" style="display:none;">
+      <label>选择快照：</label>
+      <select id="snapshotSelect">
+        <option value="">-- 请选择历史快照 --</option>
+      </select>
+    </div>
+    <div class="report-snapshot-info" id="snapshotInfo" style="display:none;"></div>
+  </div>
 
   <main class="report-main">
     <div id="reportLoading" class="report-loading">
@@ -36,6 +52,7 @@
           <div class="report-studio-name">古籍修复工作室</div>
           <h1 class="report-title">藏品修复报告</h1>
           <div class="report-subtitle">Restoration Report</div>
+          <div class="report-badge" id="reportBadge" style="display:none;"></div>
         </div>
 
         <div class="report-info-grid">
@@ -127,6 +144,29 @@
       </div>
     </div>
   </main>
+
+  <div class="modal-overlay" id="archiveModal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>归档报告快照</h3>
+        <button class="modal-close" id="archiveModalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="snapshotName">快照名称</label>
+          <input type="text" id="snapshotName" placeholder="例如：终版报告、首次归档等">
+        </div>
+        <div class="form-group">
+          <label for="snapshotNote">备注（可选）</label>
+          <textarea id="snapshotNote" rows="3" placeholder="填写归档备注信息"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" id="archiveCancelBtn">取消</button>
+        <button id="archiveConfirmBtn">确认归档</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/js/report.js"></script>
 </body>
