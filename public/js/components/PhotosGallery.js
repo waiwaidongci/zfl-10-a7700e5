@@ -204,7 +204,7 @@
         try {
           const res = await this._api("/api/projects/" + this.projectId + "/photos", {
             method: "POST",
-            body: JSON.stringify({ stage: stage, url: url })
+            body: JSON.stringify({ stage: stage, url: url, basePhotoCount: (this.archive[stage] || []).length })
           });
           if (res.error) {
             alert(res.message || "添加失败");
@@ -240,7 +240,7 @@
         try {
           const res = await this._api("/api/projects/" + this.projectId + "/photos", {
             method: "DELETE",
-            body: JSON.stringify({ stage: stage, index: index, url: url })
+            body: JSON.stringify({ stage: stage, index: index, url: url, basePhotoCount: (this.archive[stage] || []).length })
           });
           if (res.error) {
             alert(res.message || "删除失败");

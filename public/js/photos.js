@@ -264,7 +264,7 @@
 
     var res = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos", {
       method: "POST",
-      body: JSON.stringify({ stage: stage, url: url })
+      body: JSON.stringify({ stage: stage, url: url, basePhotoCount: (photosCurrentArchive[stage] || []).length })
     });
 
     if (res.error) {
@@ -296,7 +296,7 @@
 
     var res = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos", {
       method: "DELETE",
-      body: JSON.stringify({ stage: stage, index: index, url: url })
+      body: JSON.stringify({ stage: stage, index: index, url: url, basePhotoCount: (photosCurrentArchive[stage] || []).length })
     });
 
     if (res.error) {

@@ -106,11 +106,11 @@ window.SyncManager = {
     const photosMatch = path.match(/^\/api\/projects\/([^/]+)\/photos$/);
     if (photosMatch && options.method === 'POST') {
       const projectId = photosMatch[1];
-      return this.savePhotoAddDraft(projectId, body.stage, body.url);
+      return this.savePhotoAddDraft(projectId, body.stage, body.url, body.basePhotoCount);
     }
     if (photosMatch && options.method === 'DELETE') {
       const projectId = photosMatch[1];
-      return this.savePhotoDeleteDraft(projectId, body.stage, body.index, body.url);
+      return this.savePhotoDeleteDraft(projectId, body.stage, body.index, body.url, body.basePhotoCount);
     }
     throw new Error('网络不可用，且该操作不支持离线保存');
   },
@@ -274,7 +274,7 @@ window.SyncManager = {
     return { _savedAsDraft: true, draftId, operation: 'delete' };
   },
 
-  async savePhotoAddDraft(projectId, stage, url) {
+  async savePhotoAddDraft(projectId, stage, url, basePhotoCount) {
     const draftId = `D-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const draft = {
       id: draftId,
@@ -283,8 +283,9 @@ window.SyncManager = {
       operation: 'add',
       entityId: `${projectId}-${stage}`,
       projectId,
-      data: { stage, url },
+      data: { stage, url, operation: 'add' },
       baseVersion: 1,
+      basePhotoCount: basePhotoCount !== undefined ? basePhotoCount : -1,
       createdBy: this.getCurrentUserId(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -305,7 +306,7 @@ window.SyncManager = {
     };
   },
 
-  async savePhotoDeleteDraft(projectId, stage, index, url) {
+  async savePhotoDeleteDraft(projectId, stage, index, url, basePhotoCount) {
     const draftId = `D-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const draft = {
       id: draftId,
@@ -314,8 +315,9 @@ window.SyncManager = {
       operation: 'delete',
       entityId: `${projectId}-${stage}`,
       projectId,
-      data: { stage, index, url },
+      data: { stage, index, url, operation: 'delete' },
       baseVersion: 1,
+      basePhotoCount: basePhotoCount !== undefined ? basePhotoCount : -1,
       createdBy: this.getCurrentUserId(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

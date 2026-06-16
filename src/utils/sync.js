@@ -60,8 +60,11 @@ export function createTimelineDraft(projectId, timelineData, userId) {
 }
 
 export function createPhotoDraft(projectId, photoData, userId) {
-  const { stage, url, index, operation } = photoData;
-  const op = operation || (url ? "add" : (index !== undefined ? "delete" : "add"));
+  const { stage, url, index, operation, basePhotoCount } = photoData;
+  let op = operation;
+  if (!op) {
+    op = url && index === undefined ? "add" : (index !== undefined ? "delete" : "add");
+  }
   const entityId = `${projectId}-${stage}`;
 
   return {
@@ -73,6 +76,7 @@ export function createPhotoDraft(projectId, photoData, userId) {
     projectId,
     data: deepClone(photoData),
     baseVersion: 1,
+    basePhotoCount: basePhotoCount !== undefined ? basePhotoCount : -1,
     createdBy: userId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -174,8 +178,17 @@ export function detectPhotosConflict(localDraft, serverProject) {
 
   if (!hasConflict) {
     const photoCount = serverPhotos.length;
-    const baseCount = localDraft.basePhotoCount !== undefined ? localDraft.basePhotoCount : photoCount;
-    if (baseCount !== photoCount) {
+    const baseCount = localDraft.basePhotoCount;
+    if (baseCount !== undefined && baseCount >= 0 && baseCount !== photoCount) {
+      hasConflict = true;
+      conflictType = "list_changed";
+    }
+  }
+
+  if (!hasConflict && localDraft.basePhotoList && Array.isArray(localDraft.basePhotoList)) {
+    const serverStr = JSON.stringify(serverPhotos);
+    const baseStr = JSON.stringify(localDraft.basePhotoList);
+    if (serverStr !== baseStr) {
       hasConflict = true;
       conflictType = "list_changed";
     }
