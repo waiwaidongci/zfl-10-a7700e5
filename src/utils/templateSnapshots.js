@@ -91,9 +91,15 @@ export function compareTemplateWithSnapshot(template, snapshot) {
   };
 
   const changedFields = Object.keys(fieldDifferences).filter(key => fieldDifferences[key].changed);
+  const syncedFieldVersions = snapshot.syncedFieldVersions || {};
+  const partiallySyncedFields = Object.keys(syncedFieldVersions);
+  const isPartiallySynced = partiallySyncedFields.length > 0 && changedFields.length > 0;
+  const isFullyUpToDate = changedFields.length === 0;
 
   return {
     isNewer,
+    isPartiallySynced,
+    isFullyUpToDate,
     templateId: template.id,
     templateName: template.name,
     templateCategory: template.category,
@@ -102,6 +108,7 @@ export function compareTemplateWithSnapshot(template, snapshot) {
     appliedAt: snapshot.appliedAt,
     fieldDifferences,
     changedFields,
+    partiallySyncedFields,
     hasChanges: changedFields.length > 0
   };
 }

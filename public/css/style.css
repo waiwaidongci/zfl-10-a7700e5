@@ -4132,6 +4132,27 @@ nav.tabs a.active {
   background: #a07400;
 }
 
+.pd-snapshot-upgrade-banner.partial {
+  background: linear-gradient(135deg, #e8f4e8 0%, #c8e0c8 100%);
+  border-color: #7ba67b;
+}
+
+.pd-snapshot-upgrade-banner.partial .pd-snapshot-upgrade-title {
+  color: #2e502e;
+}
+
+.pd-snapshot-upgrade-banner.partial .pd-snapshot-upgrade-meta {
+  color: #5a8a5a;
+}
+
+.pd-snapshot-upgrade-banner.partial .pd-snapshot-upgrade-btn {
+  background: #508a50;
+}
+
+.pd-snapshot-upgrade-banner.partial .pd-snapshot-upgrade-btn:hover {
+  background: #3e703e;
+}
+
 .pd-snapshot-upgrade-hint {
   flex-shrink: 0;
   font-size: 11px;

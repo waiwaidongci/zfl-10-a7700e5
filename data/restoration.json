@@ -62,9 +62,70 @@
     {
       "id": "R-1781488785089",
       "status": "进行中",
-      "updatedAt": "2026-06-15",
+      "updatedAt": "2026-06-16",
       "reviewRecords": [],
-      "timelineRecords": [],
+      "timelineRecords": [
+        {
+          "id": "T-1781613932576-c8d19w",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-16",
+          "steps": "模板版本升级：v1 → v2",
+          "materials": "",
+          "notes": "同步字段：预计工期",
+          "photoUrl": "",
+          "systemMessage": "模板\"线装书修复流程\"从 v1 同步更新至 v2（同步：预计工期）",
+          "materialUsages": [],
+          "createdAt": "2026-06-16T12:45:32.576Z",
+          "version": 1
+        },
+        {
+          "id": "T-1781613932603-qtgnoo",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-16",
+          "steps": "模板版本升级：v1 → v2",
+          "materials": "",
+          "notes": "同步字段：复核要求",
+          "photoUrl": "",
+          "systemMessage": "模板\"线装书修复流程\"从 v1 同步更新至 v2（同步：复核要求）",
+          "materialUsages": [],
+          "createdAt": "2026-06-16T12:45:32.603Z",
+          "version": 1
+        },
+        {
+          "id": "T-1781614268439-yyrnlu",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-16",
+          "steps": "模板版本升级：v2 → v3",
+          "materials": "",
+          "notes": "同步字段：使用材料",
+          "photoUrl": "",
+          "systemMessage": "模板\"线装书修复流程\"从 v2 同步更新至 v3（同步：使用材料）",
+          "materialUsages": [],
+          "createdAt": "2026-06-16T12:51:08.439Z",
+          "version": 1
+        },
+        {
+          "id": "T-1781614268445-o2ufea",
+          "type": "system",
+          "operator": "管理员",
+          "operatorId": "u-admin",
+          "date": "2026-06-16",
+          "steps": "模板版本升级：v2 → v3",
+          "materials": "",
+          "notes": "同步字段：复核要求",
+          "photoUrl": "",
+          "systemMessage": "模板\"线装书修复流程\"从 v2 同步更新至 v3（同步：复核要求）",
+          "materialUsages": [],
+          "createdAt": "2026-06-16T12:51:08.445Z",
+          "version": 1
+        }
+      ],
       "photoArchive": {
         "before": [],
         "during": [],
@@ -74,23 +135,123 @@
         "templateId": "TPL-002",
         "templateName": "线装书修复流程",
         "templateCategory": "线装书",
-        "templateVersion": 1,
+        "templateVersion": 3,
         "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
-        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
-        "estimatedDays": 10,
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（新增v3）",
+        "estimatedDays": 12,
         "reviewRequired": true,
-        "reviewNotes": "需检验装订牢固度、封面托裱质量及整体平整度",
-        "appliedAt": "2026-06-15"
+        "reviewNotes": "v3版复核要点：1.书脊加固检查 2.封面托裱粘合度 3.穿线牢固度 4.页面整体平整度 5.无残留污渍和灰尘",
+        "appliedAt": "2026-06-16",
+        "syncedFieldVersions": {
+          "estimatedDays": 2,
+          "reviewNotes": 3,
+          "materials": 3
+        },
+        "syncedFields": {
+          "reviewNotes": true
+        }
       },
       "title": "清代线装小说",
       "era": "清代",
       "damage": "服务端修改的破损描述",
       "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
-      "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+      "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（新增v3）",
       "owner": "严澈",
-      "dueDate": "2026-06-25",
+      "dueDate": "2026-06-27",
       "photos": "",
-      "version": 5
+      "version": 9,
+      "templateSnapshotHistory": [
+        {
+          "templateId": "TPL-002",
+          "templateName": "线装书修复流程",
+          "templateCategory": "线装书",
+          "templateVersion": 2,
+          "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+          "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（新增v3）",
+          "estimatedDays": 12,
+          "reviewRequired": true,
+          "reviewNotes": "线装书修复后的复核要点：装订质量、书脊加固、封面托裱平整度、穿线牢固度",
+          "appliedAt": "2026-06-16",
+          "syncedFieldVersions": {
+            "estimatedDays": 2,
+            "reviewNotes": 2,
+            "materials": 3
+          },
+          "syncedFields": {
+            "materials": true
+          },
+          "_archived": true,
+          "_syncedFrom": 2,
+          "_syncedAt": "2026-06-16",
+          "_syncedBy": "管理员",
+          "_syncedById": "u-admin"
+        },
+        {
+          "templateId": "TPL-002",
+          "templateName": "线装书修复流程",
+          "templateCategory": "线装书",
+          "templateVersion": 2,
+          "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+          "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+          "estimatedDays": 12,
+          "reviewRequired": true,
+          "reviewNotes": "线装书修复后的复核要点：装订质量、书脊加固、封面托裱平整度、穿线牢固度",
+          "appliedAt": "2026-06-16",
+          "syncedFieldVersions": {
+            "estimatedDays": 2,
+            "reviewNotes": 2
+          },
+          "syncedFields": {
+            "reviewNotes": true
+          },
+          "_archived": true,
+          "_syncedFrom": 2,
+          "_syncedAt": "2026-06-16",
+          "_syncedBy": "管理员",
+          "_syncedById": "u-admin"
+        },
+        {
+          "templateId": "TPL-002",
+          "templateName": "线装书修复流程",
+          "templateCategory": "线装书",
+          "templateVersion": 1,
+          "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+          "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+          "estimatedDays": 12,
+          "reviewRequired": true,
+          "reviewNotes": "需检验装订牢固度、封面托裱质量及整体平整度",
+          "appliedAt": "2026-06-16",
+          "syncedFieldVersions": {
+            "estimatedDays": 2
+          },
+          "syncedFields": {
+            "estimatedDays": true
+          },
+          "_archived": true,
+          "_syncedFrom": 1,
+          "_syncedAt": "2026-06-16",
+          "_syncedBy": "管理员",
+          "_syncedById": "u-admin"
+        },
+        {
+          "templateId": "TPL-002",
+          "templateName": "线装书修复流程",
+          "templateCategory": "线装书",
+          "templateVersion": 1,
+          "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+          "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+          "estimatedDays": 10,
+          "reviewRequired": true,
+          "reviewNotes": "需检验装订牢固度、封面托裱质量及整体平整度",
+          "appliedAt": "2026-06-15",
+          "_archived": true,
+          "_syncedFrom": 1,
+          "_syncedAt": "2026-06-16",
+          "_syncedBy": "管理员",
+          "_syncedById": "u-admin"
+        }
+      ],
+      "reviewNotes": "v3版复核要点：1.书脊加固检查 2.封面托裱粘合度 3.穿线牢固度 4.页面整体平整度 5.无残留污渍和灰尘"
     },
     {
       "id": "R-1781488677239",
@@ -737,12 +898,12 @@
       "id": "TPL-002",
       "name": "线装书修复流程",
       "category": "线装书",
-      "version": 2,
+      "version": 3,
       "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
-      "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+      "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（新增v3）",
       "estimatedDays": 12,
       "reviewRequired": true,
-      "reviewNotes": "线装书修复后的复核要点：装订质量、书脊加固、封面托裱平整度、穿线牢固度",
+      "reviewNotes": "v3版复核要点：1.书脊加固检查 2.封面托裱粘合度 3.穿线牢固度 4.页面整体平整度 5.无残留污渍和灰尘",
       "createdAt": "2026-06-14",
       "updatedAt": "2026-06-16"
     },
@@ -761,6 +922,21 @@
     }
   ],
   "templateVersions": [
+    {
+      "id": "TV-1781613961132-hcj8rw",
+      "templateId": "TPL-002",
+      "version": 3,
+      "name": "线装书修复流程",
+      "category": "线装书",
+      "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+      "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（新增v3）",
+      "estimatedDays": 12,
+      "reviewRequired": true,
+      "reviewNotes": "v3版复核要点：1.书脊加固检查 2.封面托裱粘合度 3.穿线牢固度 4.页面整体平整度 5.无残留污渍和灰尘",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "createdAt": "2026-06-16"
+    },
     {
       "id": "TV-1781611681513-ihzi2s",
       "templateId": "TPL-002",
@@ -882,6 +1058,166 @@
     ]
   },
   "auditLogs": [
+    {
+      "id": "AUD-1781614268445-nitwem",
+      "projectId": "R-1781488785089",
+      "actionType": "template_sync",
+      "actionLabel": "同步模板更新",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "sync",
+      "timestamp": "2026-06-16T12:51:08.445Z",
+      "beforeState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（新增v3）",
+        "owner": "严澈",
+        "dueDate": "2026-06-27",
+        "status": "进行中",
+        "photos": ""
+      },
+      "afterState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（新增v3）",
+        "owner": "严澈",
+        "dueDate": "2026-06-27",
+        "status": "进行中",
+        "photos": ""
+      },
+      "changes": [],
+      "summary": "项目创建",
+      "note": "模板\"线装书修复流程\" v2 → v3，同步字段：复核要求",
+      "relatedId": "TPL-002"
+    },
+    {
+      "id": "AUD-1781614268439-u2ccrb",
+      "projectId": "R-1781488785089",
+      "actionType": "template_sync",
+      "actionLabel": "同步模板更新",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "sync",
+      "timestamp": "2026-06-16T12:51:08.439Z",
+      "beforeState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "owner": "严澈",
+        "dueDate": "2026-06-27",
+        "status": "进行中",
+        "photos": ""
+      },
+      "afterState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（新增v3）",
+        "owner": "严澈",
+        "dueDate": "2026-06-27",
+        "status": "进行中",
+        "photos": ""
+      },
+      "changes": [
+        {
+          "field": "materials",
+          "label": "使用材料",
+          "oldValue": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+          "newValue": "楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（新增v3）",
+          "type": "modify"
+        }
+      ],
+      "summary": "使用材料：楮皮纸、小麦淀粉浆、棉线、宣纸 → 楮皮纸、小麦淀粉浆、棉线、宣纸、脱酸剂（…",
+      "note": "模板\"线装书修复流程\" v2 → v3，同步字段：使用材料",
+      "relatedId": "TPL-002"
+    },
+    {
+      "id": "AUD-1781613932603-nbl301",
+      "projectId": "R-1781488785089",
+      "actionType": "template_sync",
+      "actionLabel": "同步模板更新",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "sync",
+      "timestamp": "2026-06-16T12:45:32.603Z",
+      "beforeState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "owner": "严澈",
+        "dueDate": "2026-06-27",
+        "status": "进行中",
+        "photos": ""
+      },
+      "afterState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "owner": "严澈",
+        "dueDate": "2026-06-27",
+        "status": "进行中",
+        "photos": ""
+      },
+      "changes": [],
+      "summary": "项目创建",
+      "note": "模板\"线装书修复流程\" v1 → v2，同步字段：复核要求",
+      "relatedId": "TPL-002"
+    },
+    {
+      "id": "AUD-1781613932577-v45rz8",
+      "projectId": "R-1781488785089",
+      "actionType": "template_sync",
+      "actionLabel": "同步模板更新",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "sync",
+      "timestamp": "2026-06-16T12:45:32.577Z",
+      "beforeState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "owner": "严澈",
+        "dueDate": "2026-06-25",
+        "status": "进行中",
+        "photos": ""
+      },
+      "afterState": {
+        "title": "清代线装小说",
+        "era": "清代",
+        "damage": "服务端修改的破损描述",
+        "steps": "1. 拆线，逐页检查破损情况\n2. 清理页面灰尘及霉斑\n3. 对脱胶页面进行补缀\n4. 对断裂书脊进行重新装订\n5. 封面托裱修复\n6. 穿线加固，压平定型",
+        "materials": "楮皮纸、小麦淀粉浆、棉线、宣纸",
+        "owner": "严澈",
+        "dueDate": "2026-06-27",
+        "status": "进行中",
+        "photos": ""
+      },
+      "changes": [
+        {
+          "field": "dueDate",
+          "label": "预计完成日期",
+          "oldValue": "2026-06-25",
+          "newValue": "2026-06-27",
+          "type": "modify"
+        }
+      ],
+      "summary": "预计完成日期：2026-06-25 → 2026-06-27",
+      "note": "模板\"线装书修复流程\" v1 → v2，同步字段：预计工期",
+      "relatedId": "TPL-002"
+    },
     {
       "id": "AUD-1781612398325-rzl5to",
       "projectId": "R-TEST-001",

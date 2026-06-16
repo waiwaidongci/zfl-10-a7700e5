@@ -220,16 +220,20 @@ export async function handleProjects(req, res, db, pathname) {
     }
 
     const comparison = compareTemplateWithSnapshot(template, snapshot);
+    const hasChanges = comparison?.hasChanges || false;
+    const isPartiallySynced = (snapshot.syncedFieldVersions && Object.keys(snapshot.syncedFieldVersions).length > 0 && hasChanges) || false;
     return sendJson(res, 200, {
       hasSnapshot: true,
       templateDeleted: false,
-      hasUpdate: comparison?.isNewer || false,
-      hasChanges: comparison?.hasChanges || false,
+      hasUpdate: hasChanges,
+      hasChanges,
+      isPartiallySynced,
       snapshotVersion: snapshot.templateVersion || 0,
       currentVersion: template.version,
       templateId: template.id,
       templateName: template.name,
-      appliedAt: snapshot.appliedAt
+      appliedAt: snapshot.appliedAt,
+      syncedFields: snapshot.syncedFieldVersions
     });
   }
 
@@ -301,13 +305,18 @@ export async function handleProjects(req, res, db, pathname) {
 
     const syncedFields = {};
     const newSnapshot = createSnapshot(template);
+    if (!snapshot.syncedFieldVersions) snapshot.syncedFieldVersions = {};
 
     if (selectedFields.steps) {
       project.steps = template.steps;
+      snapshot.steps = template.steps;
+      snapshot.syncedFieldVersions.steps = newVersion;
       syncedFields.steps = true;
     }
     if (selectedFields.materials) {
       project.materials = template.materials;
+      snapshot.materials = template.materials;
+      snapshot.syncedFieldVersions.materials = newVersion;
       syncedFields.materials = true;
     }
     if (selectedFields.estimatedDays) {
@@ -317,17 +326,28 @@ export async function handleProjects(req, res, db, pathname) {
         base.setDate(base.getDate() + daysDiff);
         project.dueDate = base.toISOString().slice(0, 10);
       }
+      snapshot.estimatedDays = template.estimatedDays;
+      snapshot.syncedFieldVersions.estimatedDays = newVersion;
       syncedFields.estimatedDays = true;
     }
     if (selectedFields.reviewRequired) {
       project.reviewRequired = template.reviewRequired !== false;
+      snapshot.reviewRequired = template.reviewRequired !== false;
+      snapshot.syncedFieldVersions.reviewRequired = newVersion;
       syncedFields.reviewRequired = true;
     }
     if (selectedFields.reviewNotes) {
+      project.reviewNotes = template.reviewNotes || "";
+      snapshot.reviewNotes = template.reviewNotes || "";
+      snapshot.syncedFieldVersions.reviewNotes = newVersion;
       syncedFields.reviewNotes = true;
     }
 
-    Object.assign(snapshot, newSnapshot);
+    const remainingDiff = compareTemplateWithSnapshot(template, snapshot);
+    const fullySynced = remainingDiff && remainingDiff.changedFields.length === 0;
+    if (fullySynced) {
+      snapshot.templateVersion = newVersion;
+    }
     snapshot.appliedAt = new Date().toISOString().slice(0, 10);
     snapshot.syncedFields = syncedFields;
 

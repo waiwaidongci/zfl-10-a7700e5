@@ -257,14 +257,22 @@
         html += '<div class="pd-snapshot-notes" style="margin-top:6px;padding-top:6px;border-top:1px dashed #e0dcd2;font-size:12px;color:#6b6258;"><b>复核要求：</b>' + escapeHtml(snapshot.reviewNotes) + '</div>';
       }
       if (ts && ts.hasChanges && !ts.templateDeleted) {
-        html += '<div class="pd-snapshot-upgrade-banner" id="pd-snapshot-upgrade">';
-        html += '<div class="pd-snapshot-upgrade-icon">✨</div>';
+        const diffCount = (ts.changedFields && ts.changedFields.length) || ts.changedCount || '若干';
+        const isPartial = !!ts.isPartiallySynced;
+        const partialHint = isPartial ? (' · 上次部分同步，还剩 ' + diffCount + ' 项待同步') : '';
+        html += '<div class="pd-snapshot-upgrade-banner' + (isPartial ? ' partial' : '') + '" id="pd-snapshot-upgrade">';
+        html += '<div class="pd-snapshot-upgrade-icon">' + (isPartial ? '🔧' : '✨') + '</div>';
         html += '<div class="pd-snapshot-upgrade-body">';
-        html += '<div class="pd-snapshot-upgrade-title">模板已更新至 v' + ts.currentVersion + '</div>';
-        html += '<div class="pd-snapshot-upgrade-meta">共 ' + (ts.changedFields ? ts.changedFields.length : (ts.changedCount || '若干')) + ' 处差异</div>';
+        if (isPartial) {
+          html += '<div class="pd-snapshot-upgrade-title">还有 ' + diffCount + ' 项可补同步至 v' + ts.currentVersion + '</div>';
+          html += '<div class="pd-snapshot-upgrade-meta">上次部分同步后剩余未同步项' + partialHint + '</div>';
+        } else {
+          html += '<div class="pd-snapshot-upgrade-title">模板已更新至 v' + ts.currentVersion + '</div>';
+          html += '<div class="pd-snapshot-upgrade-meta">共 ' + diffCount + ' 处差异</div>';
+        }
         html += '</div>';
         if (this.options.isAdmin && typeof this.options.onOpenTemplateDiff === "function") {
-          html += '<button class="pd-snapshot-upgrade-btn" data-action="template-diff">查看差异 →</button>';
+          html += '<button class="pd-snapshot-upgrade-btn" data-action="template-diff">' + (isPartial ? '补同步 →' : '查看差异 →') + '</button>';
         } else if (!this.options.isAdmin) {
           html += '<span class="pd-snapshot-upgrade-hint">联系管理员同步</span>';
         }
