@@ -97,6 +97,12 @@ window.SyncManager = {
       body.id = projectId;
       return this.saveProjectDraft(body);
     }
+    const deleteMatch = path.match(/^\/api\/projects\/([^/]+)\/timeline\/([^/]+)$/);
+    if (deleteMatch && options.method === 'DELETE') {
+      const projectId = deleteMatch[1];
+      const recordId = deleteMatch[2];
+      return this.saveTimelineDeleteDraft(projectId, recordId);
+    }
     throw new Error('网络不可用，且该操作不支持离线保存');
   },
 
@@ -233,6 +239,30 @@ window.SyncManager = {
     };
 
     return { project: {}, record: tempRecord, _savedAsDraft: true, draftId };
+  },
+
+  async saveTimelineDeleteDraft(projectId, recordId) {
+    const draftId = `D-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const draft = {
+      id: draftId,
+      type: 'timeline',
+      entityType: 'timeline',
+      operation: 'delete',
+      entityId: recordId,
+      projectId,
+      data: { recordId },
+      baseVersion: 1,
+      createdBy: this.getCurrentUserId(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'pending',
+      syncAttempts: 0,
+      lastSyncError: null,
+      isLocal: true
+    };
+
+    this.saveDraft(draft);
+    return { _savedAsDraft: true, draftId, operation: 'delete' };
   },
 
   getCurrentUserId() {

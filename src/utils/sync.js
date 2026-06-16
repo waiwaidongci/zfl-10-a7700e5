@@ -30,12 +30,23 @@ export function createProjectDraft(projectData, userId) {
 }
 
 export function createTimelineDraft(projectId, timelineData, userId) {
+  let operation = "create";
+  let entityId = null;
+
+  if (timelineData.recordId && !timelineData.id && !timelineData.steps) {
+    operation = "delete";
+    entityId = timelineData.recordId;
+  } else if (timelineData.id) {
+    operation = "update";
+    entityId = timelineData.id;
+  }
+
   return {
     id: generateDraftId(),
     type: "timeline",
     entityType: "timeline",
-    operation: timelineData.id ? "update" : "create",
-    entityId: timelineData.id || null,
+    operation,
+    entityId,
     projectId,
     data: deepClone(timelineData),
     baseVersion: timelineData.version || 1,

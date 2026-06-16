@@ -276,21 +276,24 @@ function render() {
   });
 
   document.querySelectorAll(".timeline-btn").forEach((btn) => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
       const p = projects.find((item) => item.id === btn.dataset.project);
       if (p && window.Timeline) window.Timeline.open(p, users);
     };
   });
 
   document.querySelectorAll(".photo-btn").forEach((btn) => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
       const p = projects.find((item) => item.id === btn.dataset.project);
       if (p && window.Photos) window.Photos.open(p);
     };
   });
 
   document.querySelectorAll(".card-detail-btn").forEach((btn) => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
       const projectId = btn.dataset.detail;
       if (expandedProjectId === projectId) {
         expandedProjectId = null;
@@ -306,7 +309,8 @@ function render() {
   });
 
   document.querySelectorAll(".report-btn").forEach((btn) => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
       const projectId = btn.dataset.report;
       if (projectId) {
         window.location.href = "/report.html?projectId=" + encodeURIComponent(projectId);

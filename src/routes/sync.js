@@ -3,6 +3,7 @@ import { getViewer } from "../utils/permissions.js";
 import { deepClone } from "../utils/diff.js";
 import { recordAudit, ACTION_TYPES, SOURCES } from "../utils/audit.js";
 import { createSystemRecord } from "../utils/timeline.js";
+import { validateMaterialUsages, checkStockSufficiency, consumeMaterials, restoreMaterials, formatMaterialUsagesText } from "../utils/materials.js";
 import {
   createProjectDraft,
   createTimelineDraft,
@@ -34,12 +35,20 @@ function sanitizeProjectInput(input) {
 
 function sanitizeTimelineInput(input) {
   const out = {};
+  if (input.id !== undefined) out.id = String(input.id).trim();
   if (input.operator !== undefined) out.operator = String(input.operator).trim();
   if (input.date !== undefined) out.date = String(input.date).trim();
   if (input.steps !== undefined) out.steps = String(input.steps).trim();
   if (input.materials !== undefined) out.materials = String(input.materials || "").trim();
   if (input.notes !== undefined) out.notes = String(input.notes || "").trim();
   if (input.photoUrl !== undefined) out.photoUrl = String(input.photoUrl || "").trim();
+  if (input.recordId !== undefined) out.recordId = String(input.recordId).trim();
+  if (input.materialUsages !== undefined && Array.isArray(input.materialUsages)) {
+    out.materialUsages = input.materialUsages.map(u => ({
+      materialId: String(u.materialId || "").trim(),
+      quantity: Number(u.quantity) || 0
+    })).filter(u => u.materialId && u.quantity > 0);
+  }
   return out;
 }
 
@@ -247,7 +256,8 @@ export async function handleSync(req, res, db, pathname) {
       return sendJson(res, 200, {
         success: true,
         type: queueItem.type,
-        entity: resultData.entity
+        entity: resultData.entity,
+        restoredMovements: resultData.restoredMovements || []
       });
     } else {
       return sendJson(res, 500, {
@@ -388,6 +398,35 @@ async function syncTimeline(db, queueItem, draft, conflict, resolution, resoluti
     const project = db.projects.find(p => p.id === queueItem.projectId);
     if (!project) return { success: false, error: "project_not_found" };
 
+    if (!project.timelineRecords) project.timelineRecords = [];
+
+    if (queueItem.operation === "delete") {
+      const idx = project.timelineRecords.findIndex(r => r.id === queueItem.entityId);
+      if (idx === -1) {
+        return { success: false, error: "record_not_found" };
+      }
+
+      const beforeState = deepClone(project);
+      const [removed] = project.timelineRecords.splice(idx, 1);
+      const restoredMovements = restoreMaterials(removed, db);
+
+      incrementVersion(project);
+      project.updatedAt = new Date().toISOString().slice(0, 10);
+
+      recordAudit(db, {
+        projectId: project.id,
+        actionType: ACTION_TYPES.PROJECT_UPDATE,
+        operator: viewer.name,
+        operatorId: viewer.id,
+        source: SOURCES.SYNC,
+        beforeState,
+        afterState: deepClone(project),
+        note: conflict ? "同步删除过程记录（已解决冲突）" : "同步删除过程记录，材料库存已恢复"
+      });
+
+      return { success: true, entity: removed, restoredMovements };
+    }
+
     let timelineData = draft.data;
     if (conflict) {
       const res = resolution === "custom" ? { fields: resolutionFields } : resolution;
@@ -395,6 +434,21 @@ async function syncTimeline(db, queueItem, draft, conflict, resolution, resoluti
     }
 
     const sanitized = sanitizeTimelineInput(timelineData);
+
+    if (queueItem.operation === "create" || queueItem.operation === "update") {
+      const materialErrors = validateMaterialUsages(sanitized.materialUsages, db);
+      if (materialErrors.length > 0) {
+        return { success: false, error: "材料校验失败：" + materialErrors.map(e => e.message).join("；") };
+      }
+
+      const shortages = checkStockSufficiency(sanitized.materialUsages, db);
+      if (shortages.length > 0) {
+        const shortageMsgs = shortages.map(s =>
+          `${s.materialName}：需要 ${s.required}${s.unit}，库存仅 ${s.available}${s.unit}，缺口 ${s.shortage}${s.unit}`
+        ).join("；");
+        return { success: false, error: "材料库存不足：" + shortageMsgs };
+      }
+    }
 
     const record = {
       id: queueItem.entityId || `T-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -405,15 +459,27 @@ async function syncTimeline(db, queueItem, draft, conflict, resolution, resoluti
       ...sanitized
     };
 
-    const beforeState = deepClone(project);
+    if (sanitized.materialUsages && sanitized.materialUsages.length > 0) {
+      const materialUsagesText = formatMaterialUsagesText(sanitized.materialUsages, db);
+      const materialsField = (sanitized.materials || "").trim();
+      record.materials = materialsField && !materialUsagesText
+        ? materialsField
+        : materialUsagesText
+          ? (materialsField ? materialsField + "；" + materialUsagesText : materialUsagesText)
+          : "";
+    }
 
-    if (!project.timelineRecords) project.timelineRecords = [];
+    const beforeState = deepClone(project);
+    let restoredMovements = [];
 
     if (queueItem.operation === "update") {
       const idx = project.timelineRecords.findIndex(r => r.id === queueItem.entityId);
       if (idx !== -1) {
-        record.version = (project.timelineRecords[idx].version || 1) + 1;
-        record.createdAt = project.timelineRecords[idx].createdAt;
+        const oldRecord = project.timelineRecords[idx];
+        restoredMovements = restoreMaterials(oldRecord, db);
+
+        record.version = (oldRecord.version || 1) + 1;
+        record.createdAt = oldRecord.createdAt;
         project.timelineRecords[idx] = record;
       } else {
         project.timelineRecords.push(record);
@@ -422,8 +488,23 @@ async function syncTimeline(db, queueItem, draft, conflict, resolution, resoluti
       project.timelineRecords.push(record);
     }
 
+    if (sanitized.materialUsages && sanitized.materialUsages.length > 0) {
+      consumeMaterials(
+        sanitized.materialUsages,
+        db,
+        project.id,
+        record.id,
+        sanitized.operator || viewer.name,
+        viewer.id
+      );
+    }
+
     incrementVersion(project);
     project.updatedAt = new Date().toISOString().slice(0, 10);
+
+    const note = conflict
+      ? (queueItem.operation === "update" ? "同步更新过程记录（已解决冲突）" : "同步过程记录（已解决冲突）")
+      : (queueItem.operation === "update" ? "同步更新过程记录" : "同步过程记录");
 
     recordAudit(db, {
       projectId: project.id,
@@ -433,10 +514,10 @@ async function syncTimeline(db, queueItem, draft, conflict, resolution, resoluti
       source: SOURCES.SYNC,
       beforeState,
       afterState: deepClone(project),
-      note: conflict ? "同步过程记录（已解决冲突）" : "同步过程记录"
+      note
     });
 
-    return { success: true, entity: record };
+    return { success: true, entity: record, restoredMovements };
   } catch (error) {
     return { success: false, error: error.message };
   }

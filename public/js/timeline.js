@@ -4,7 +4,7 @@ let currentUser = null;
 let availableMaterials = [];
 let selectedMaterialUsages = [];
 
-function api(path, options) {
+async function api(path, options) {
   if (window.SyncManager) {
     return window.SyncManager.api(path, options);
   }
@@ -12,7 +12,15 @@ function api(path, options) {
   const viewerId = viewerEl ? viewerEl.value : '';
   const headers = { "Content-Type": "application/json" };
   if (viewerId) headers["X-Viewer-Id"] = viewerId;
-  return fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers })).then(r => r.json());
+  const res = await fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers }));
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.message || data.error || '请求失败');
+    err.error = data.error;
+    err.data = data;
+    throw err;
+  }
+  return data;
 }
 
 window.Timeline = {
@@ -35,7 +43,7 @@ window.Timeline = {
       availableMaterials = [];
     }
     selectedMaterialUsages = [];
-    showModal(project, users);
+    _timelineShowModal(project, users);
   },
 
   mergeRecordsWithDrafts(records) {
@@ -43,6 +51,10 @@ window.Timeline = {
     const drafts = window.SyncManager.getDrafts().filter(
       d => d.type === 'timeline' && d.projectId === currentProjectId && d.operation === 'create'
     );
+    const deletedRecordIds = window.SyncManager.getDrafts().filter(
+      d => d.type === 'timeline' && d.projectId === currentProjectId && d.operation === 'delete'
+    ).map(d => d.entityId);
+
     const draftRecords = drafts.map(d => ({
       ...d.data,
       id: d.id,
@@ -52,7 +64,9 @@ window.Timeline = {
       _isDraft: true,
       _draftId: d.id
     }));
-    return [...draftRecords, ...records];
+
+    const filteredRecords = records.filter(r => !deletedRecordIds.includes(r.id));
+    return [...draftRecords, ...filteredRecords];
   },
 
   getLatest(records) {
@@ -71,17 +85,17 @@ window.Timeline = {
           '<b>' + (isSystem ? '[系统] ' + record.systemMessage : record.operator + ' · ' + record.date) + '</b>' +
           (isDraft ? '<span class="timeline-badge draft">本地草稿</span>' : '') +
         '</div>' +
-        (isSystem ? '' : '<div class="timeline-latest-body">' + escapeHtml(record.steps).slice(0, 40) + (record.steps.length > 40 ? '…' : '') + '</div>') +
+        (isSystem ? '' : '<div class="timeline-latest-body">' + _timelineEscapeHtml(record.steps).slice(0, 40) + (record.steps.length > 40 ? '…' : '') + '</div>') +
       '</div>'
     );
   }
 };
 
-function escapeHtml(s) {
+function _timelineEscapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function isAdmin() {
+function _timelineIsAdmin() {
   const viewerEl = document.querySelector('#viewer');
   const viewerId = viewerEl ? viewerEl.value : '';
   const usersEl = document.querySelector('#users-data');
@@ -95,8 +109,8 @@ function isAdmin() {
   }
 }
 
-function showModal(project, users) {
-  closeModal();
+function _timelineShowModal(project, users) {
+  _timelineCloseModal();
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.id = 'timeline-modal';
@@ -104,7 +118,7 @@ function showModal(project, users) {
     '<div class="modal-overlay" data-close="1"></div>' +
     '<div class="modal-content">' +
       '<div class="modal-header">' +
-        '<h3>修复过程时间线 — ' + escapeHtml(project.title) + '</h3>' +
+        '<h3>修复过程时间线 — ' + _timelineEscapeHtml(project.title) + '</h3>' +
         '<button class="modal-close" data-close="1">×</button>' +
       '</div>' +
       '<div class="modal-body">' +
@@ -118,32 +132,32 @@ function showModal(project, users) {
     '</div>';
   document.body.appendChild(modal);
 
-  modal.querySelectorAll('[data-close]').forEach(el => el.onclick = closeModal);
+  modal.querySelectorAll('[data-close]').forEach(el => el.onclick = _timelineCloseModal);
 
-  document.getElementById('timeline-add-btn').onclick = () => toggleForm(users);
-  renderList();
+  document.getElementById('timeline-add-btn').onclick = () => _timelineToggleForm(users);
+  _timelineRenderList();
 }
 
-function closeModal() {
+function _timelineCloseModal() {
   const m = document.getElementById('timeline-modal');
   if (m) m.remove();
 }
 
-function toggleForm(users) {
+function _timelineToggleForm(users) {
   const wrap = document.getElementById('timeline-form-wrap');
   const btn = document.getElementById('timeline-add-btn');
   if (wrap.style.display === 'none') {
     wrap.style.display = 'block';
     btn.style.display = 'none';
     selectedMaterialUsages = [];
-    renderForm(users);
+    _timelineRenderForm(users);
   } else {
     wrap.style.display = 'none';
     btn.style.display = 'inline-block';
   }
 }
 
-function renderForm(users) {
+function _timelineRenderForm(users) {
   const wrap = document.getElementById('timeline-form-wrap');
   const viewerEl = document.querySelector('#viewer');
   const viewerId = viewerEl ? viewerEl.value : '';
@@ -153,7 +167,7 @@ function renderForm(users) {
     '<div class="timeline-form panel">' +
       '<h4 style="margin:0 0 10px;">新增过程记录</h4>' +
       '<label>操作人</label>' +
-      '<input id="tf-operator" value="' + escapeHtml(currentViewer ? currentViewer.name : '') + '">' +
+      '<input id="tf-operator" value="' + _timelineEscapeHtml(currentViewer ? currentViewer.name : '') + '">' +
       '<label>日期</label>' +
       '<input id="tf-date" type="date" value="' + new Date().toISOString().slice(0, 10) + '">' +
       '<label>处理步骤</label>' +
@@ -165,7 +179,7 @@ function renderForm(users) {
           '<select id="tf-material-select">' +
             '<option value="">-- 选择材料 --</option>' +
             availableMaterials.map(m => 
-              '<option value="' + escapeHtml(m.id) + '">' + escapeHtml(m.name) + '（库存：' + m.quantity + ' ' + escapeHtml(m.unit) + '）</option>'
+              '<option value="' + _timelineEscapeHtml(m.id) + '">' + _timelineEscapeHtml(m.name) + '（库存：' + m.quantity + ' ' + _timelineEscapeHtml(m.unit) + '）</option>'
             ).join('') +
           '</select>' +
           '<button type="button" id="tf-add-material" class="secondary">添加</button>' +
@@ -187,20 +201,20 @@ function renderForm(users) {
     wrap.style.display = 'none';
     document.getElementById('timeline-add-btn').style.display = 'inline-block';
   };
-  document.getElementById('tf-submit').onclick = submitRecord;
-  document.getElementById('tf-add-material').onclick = addMaterialUsage;
-  renderMaterialUsagesList();
+  document.getElementById('tf-submit').onclick = _timelineSubmitRecord;
+  document.getElementById('tf-add-material').onclick = _timelineAddMaterialUsage;
+  _timelineRenderMaterialUsagesList();
 }
 
-function addMaterialUsage() {
+function _timelineAddMaterialUsage() {
   const select = document.getElementById('tf-material-select');
   const materialId = select.value;
   if (!materialId) {
-    showAlert('请选择材料', true);
+    _timelineShowAlert('请选择材料', true);
     return;
   }
   if (selectedMaterialUsages.some(u => u.materialId === materialId)) {
-    showAlert('该材料已添加', true);
+    _timelineShowAlert('该材料已添加', true);
     return;
   }
   const material = availableMaterials.find(m => m.id === materialId);
@@ -215,22 +229,22 @@ function addMaterialUsage() {
   });
 
   select.value = '';
-  renderMaterialUsagesList();
+  _timelineRenderMaterialUsagesList();
 }
 
-function removeMaterialUsage(materialId) {
+function _timelineRemoveMaterialUsage(materialId) {
   selectedMaterialUsages = selectedMaterialUsages.filter(u => u.materialId !== materialId);
-  renderMaterialUsagesList();
+  _timelineRenderMaterialUsagesList();
 }
 
-function updateMaterialQuantity(materialId, value) {
+function _timelineUpdateMaterialQuantity(materialId, value) {
   const usage = selectedMaterialUsages.find(u => u.materialId === materialId);
   if (usage) {
     usage.quantity = Number(value) || 0;
   }
 }
 
-function renderMaterialUsagesList() {
+function _timelineRenderMaterialUsagesList() {
   const listEl = document.getElementById('tf-materials-list');
   if (!listEl) return;
 
@@ -245,11 +259,11 @@ function renderMaterialUsagesList() {
     const isLow = stock < u.quantity;
     return (
       '<div class="tf-material-row">' +
-        '<span class="tf-material-name">' + escapeHtml(u.materialName) + '</span>' +
+        '<span class="tf-material-name">' + _timelineEscapeHtml(u.materialName) + '</span>' +
         '<input type="number" min="0" step="0.01" value="' + u.quantity + '" ' +
           'onchange="window.__tfUpdateQty(\'' + u.materialId + '\', this.value)" ' +
           'class="tf-material-qty" placeholder="数量">' +
-        '<span class="tf-material-unit">' + escapeHtml(u.unit) + '</span>' +
+        '<span class="tf-material-unit">' + _timelineEscapeHtml(u.unit) + '</span>' +
         '<span class="tf-material-stock' + (isLow ? ' low' : '') + '">（库存：' + stock + '）</span>' +
         '<button type="button" class="tf-material-remove danger" onclick="window.__tfRemoveMat(\'' + u.materialId + '\')">×</button>' +
       '</div>'
@@ -258,14 +272,14 @@ function renderMaterialUsagesList() {
 }
 
 window.__tfUpdateQty = function(materialId, value) {
-  updateMaterialQuantity(materialId, value);
+  _timelineUpdateMaterialQuantity(materialId, value);
 };
 
 window.__tfRemoveMat = function(materialId) {
-  removeMaterialUsage(materialId);
+  _timelineRemoveMaterialUsage(materialId);
 };
 
-function showAlert(message, isError) {
+function _timelineShowAlert(message, isError) {
   const el = document.getElementById('timeline-alert');
   if (!el) return;
   el.className = 'timeline-alert ' + (isError ? 'error' : 'success');
@@ -276,7 +290,7 @@ function showAlert(message, isError) {
   }
 }
 
-async function submitRecord() {
+async function _timelineSubmitRecord() {
   const materialUsages = selectedMaterialUsages
     .filter(u => u.quantity > 0)
     .map(u => ({ materialId: u.materialId, quantity: Number(u.quantity) }));
@@ -303,11 +317,11 @@ async function submitRecord() {
     });
 
     if (res._savedAsDraft) {
-      showAlert('网络不可用，已保存为本地草稿，联网后可在同步管理中上传', false);
+      _timelineShowAlert('网络不可用，已保存为本地草稿，联网后可在同步管理中上传', false);
       currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
       document.getElementById('timeline-form-wrap').style.display = 'none';
       document.getElementById('timeline-add-btn').style.display = 'inline-block';
-      renderList();
+      _timelineRenderList();
       if (typeof window.onTimelineUpdated === 'function') {
         window.onTimelineUpdated(currentProjectId, currentRecords);
       }
@@ -318,25 +332,11 @@ async function submitRecord() {
     }
 
     if (res.conflict) {
-      showAlert('检测到版本冲突，请在同步管理中处理', true);
+      _timelineShowAlert('检测到版本冲突，请在同步管理中处理', true);
       return;
     }
 
-    if (res.error) {
-      let msg = res.message || '操作失败';
-      if (res.error === 'insufficient_stock' && res.shortages && res.shortages.length) {
-        const shortageMsgs = res.shortages.map(s => 
-          `${s.materialName}：需要 ${s.required}${s.unit}，库存仅 ${s.available}${s.unit}，缺口 ${s.shortage}${s.unit}`
-        );
-        msg += '：' + shortageMsgs.join('；');
-      } else if (res.errors && res.errors.length) {
-        msg += '：' + res.errors.map(e => e.message).join('；');
-      }
-      showAlert(msg, true);
-      return;
-    }
-
-    showAlert('记录已添加，材料库存已自动扣减', false);
+    _timelineShowAlert('记录已添加，材料库存已自动扣减', false);
     try {
       availableMaterials = await api('/api/materials');
     } catch {}
@@ -344,20 +344,48 @@ async function submitRecord() {
     currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
     document.getElementById('timeline-form-wrap').style.display = 'none';
     document.getElementById('timeline-add-btn').style.display = 'inline-block';
-    renderList();
+    _timelineRenderList();
 
     if (typeof window.onTimelineUpdated === 'function') {
       window.onTimelineUpdated(currentProjectId, currentRecords);
     }
   } catch (error) {
-    showAlert(error.message || '保存失败', true);
+    let msg = error.message || '保存失败';
+    if (error.error === 'insufficient_stock' && error.data && error.data.shortages && error.data.shortages.length) {
+      const shortageMsgs = error.data.shortages.map(s => 
+        `${s.materialName}：需要 ${s.required}${s.unit}，库存仅 ${s.available}${s.unit}，缺口 ${s.shortage}${s.unit}`
+      );
+      msg += '：' + shortageMsgs.join('；');
+    } else if (error.data && error.data.errors && error.data.errors.length) {
+      msg += '：' + error.data.errors.map(e => e.message).join('；');
+    }
+    _timelineShowAlert(msg, true);
   } finally {
     submitBtn.textContent = originalText;
     submitBtn.disabled = false;
   }
 }
 
-async function deleteRecord(recordId) {
+async function _timelineDeleteRecord(recordId, isDraft, draftId) {
+  if (isDraft) {
+    if (!confirm('确定要删除这条本地草稿吗？')) {
+      return;
+    }
+    if (window.SyncManager) {
+      window.SyncManager.deleteDraft(draftId || recordId);
+    }
+    _timelineShowAlert('本地草稿已删除', false);
+    currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
+    _timelineRenderList();
+    if (typeof window.onTimelineUpdated === 'function') {
+      window.onTimelineUpdated(currentProjectId, currentRecords);
+    }
+    if (typeof window._syncPanel !== 'undefined' && window._syncPanel) {
+      window._syncPanel.refresh();
+    }
+    return;
+  }
+
   if (!confirm('确定要删除这条过程记录吗？相关材料库存将自动恢复。')) {
     return;
   }
@@ -367,28 +395,43 @@ async function deleteRecord(recordId) {
       method: 'DELETE'
     });
 
-    if (res.error) {
-      showAlert(res.message || '删除失败', true);
+    if (res._savedAsDraft) {
+      _timelineShowAlert('网络不可用，删除已保存为本地草稿，联网后可在同步管理中上传', false);
+      currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
+      _timelineRenderList();
+      if (typeof window.onTimelineUpdated === 'function') {
+        window.onTimelineUpdated(currentProjectId, currentRecords);
+      }
+      if (typeof window._syncPanel !== 'undefined' && window._syncPanel) {
+        window._syncPanel.refresh();
+      }
       return;
     }
 
-    showAlert('记录已删除，材料库存已恢复', false);
+    _timelineShowAlert('记录已删除，材料库存已恢复', false);
     try {
       availableMaterials = await api('/api/materials');
     } catch {}
     currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
     currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
-    renderList();
+    _timelineRenderList();
 
     if (typeof window.onTimelineUpdated === 'function') {
       window.onTimelineUpdated(currentProjectId, currentRecords);
     }
   } catch (error) {
-    showAlert(error.message || '删除失败', true);
+    let msg = error.message || '删除失败';
+    if (error.error === 'insufficient_stock' && error.data && error.data.shortages && error.data.shortages.length) {
+      const shortageMsgs = error.data.shortages.map(s =>
+        `${s.materialName}：需要 ${s.required}${s.unit}，库存仅 ${s.available}${s.unit}，缺口 ${s.shortage}${s.unit}`
+      );
+      msg += '：' + shortageMsgs.join('；');
+    }
+    _timelineShowAlert(msg, true);
   }
 }
 
-function formatMaterialUsagesDisplay(record) {
+function _timelineFormatMaterialUsagesDisplay(record) {
   if (!record.materialUsages || !Array.isArray(record.materialUsages) || record.materialUsages.length === 0) {
     return '';
   }
@@ -397,17 +440,17 @@ function formatMaterialUsagesDisplay(record) {
     const unit = u.unit || '';
     return `${name} ${u.quantity}${unit}`;
   });
-  return '<div class="timeline-item-row"><span class="tl-label">消耗材料</span><span class="tl-material-usage">' + escapeHtml(parts.join('、')) + '</span></div>';
+  return '<div class="timeline-item-row"><span class="tl-label">消耗材料</span><span class="tl-material-usage">' + _timelineEscapeHtml(parts.join('、')) + '</span></div>';
 }
 
-function renderList() {
+function _timelineRenderList() {
   const list = document.getElementById('timeline-list');
   if (!currentRecords || currentRecords.length === 0) {
     list.innerHTML = '<div class="timeline-empty-full">还没有过程记录，点击上方「新增过程记录」开始记录修复过程。</div>';
     return;
   }
 
-  const admin = isAdmin();
+  const admin = _timelineIsAdmin();
   const sorted = [...currentRecords].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   list.innerHTML = sorted.map((r, idx) => {
     const isSystem = r.type === "system";
@@ -421,18 +464,20 @@ function renderList() {
         '<div class="timeline-item-body">' +
           '<div class="timeline-item-head">' +
             (isSystem
-              ? '<span class="timeline-badge system">系统</span> <b>' + escapeHtml(r.systemMessage || '状态变更') + '</b>'
-              : '<span class="timeline-badge manual">人工</span> <b>' + escapeHtml(r.operator) + '</b>') +
+              ? '<span class="timeline-badge system">系统</span> <b>' + _timelineEscapeHtml(r.systemMessage || '状态变更') + '</b>'
+              : '<span class="timeline-badge manual">人工</span> <b>' + _timelineEscapeHtml(r.operator) + '</b>') +
             (isDraft ? '<span class="timeline-badge draft">本地草稿</span>' : '') +
-            '<span class="timeline-item-date">' + escapeHtml(r.date) + '</span>' +
-            (admin && !isSystem && !isDraft ? '<button class="timeline-delete-btn danger" data-delete="' + escapeHtml(r.id) + '">删除</button>' : '') +
+            '<span class="timeline-item-date">' + _timelineEscapeHtml(r.date) + '</span>' +
+            ((admin && !isSystem && !isDraft) || isDraft
+              ? '<button class="timeline-delete-btn ' + (isDraft ? 'secondary' : 'danger') + '" data-delete="' + _timelineEscapeHtml(r.id) + '" data-is-draft="' + (isDraft ? '1' : '0') + '" data-draft-id="' + _timelineEscapeHtml(r._draftId || r.id) + '">' + (isDraft ? '删除草稿' : '删除') + '</button>'
+              : '') +
           '</div>' +
           (isSystem ? '' :
-            '<div class="timeline-item-row"><span class="tl-label">处理步骤</span><span>' + escapeHtml(r.steps) + '</span></div>' +
-            formatMaterialUsagesDisplay(r) +
-            (r.materials ? '<div class="timeline-item-row"><span class="tl-label">使用材料</span><span>' + escapeHtml(r.materials) + '</span></div>' : '') +
-            (r.notes ? '<div class="timeline-item-row"><span class="tl-label">备注</span><span>' + escapeHtml(r.notes) + '</span></div>' : '') +
-            (r.photoUrl ? '<div class="timeline-item-row"><span class="tl-label">照片</span><a href="' + escapeHtml(r.photoUrl) + '" target="_blank" rel="noopener">查看照片 →</a></div>' : '')
+            '<div class="timeline-item-row"><span class="tl-label">处理步骤</span><span>' + _timelineEscapeHtml(r.steps) + '</span></div>' +
+            _timelineFormatMaterialUsagesDisplay(r) +
+            (r.materials ? '<div class="timeline-item-row"><span class="tl-label">使用材料</span><span>' + _timelineEscapeHtml(r.materials) + '</span></div>' : '') +
+            (r.notes ? '<div class="timeline-item-row"><span class="tl-label">备注</span><span>' + _timelineEscapeHtml(r.notes) + '</span></div>' : '') +
+            (r.photoUrl ? '<div class="timeline-item-row"><span class="tl-label">照片</span><a href="' + _timelineEscapeHtml(r.photoUrl) + '" target="_blank" rel="noopener">查看照片 →</a></div>' : '')
           ) +
         '</div>' +
       '</div>'
@@ -440,6 +485,10 @@ function renderList() {
   }).join('');
 
   list.querySelectorAll('button[data-delete]').forEach(btn => {
-    btn.onclick = () => deleteRecord(btn.dataset.delete);
+    btn.onclick = () => _timelineDeleteRecord(
+      btn.dataset.delete,
+      btn.dataset.isDraft === '1',
+      btn.dataset.draftId
+    );
   });
 }
