@@ -45,6 +45,10 @@ window.SyncManager = {
     const viewerId = viewerEl ? viewerEl.value : '';
     const headers = { 'Content-Type': 'application/json' };
     if (viewerId) headers['X-Viewer-Id'] = viewerId;
+    if (options && options.method && options.method !== 'GET') {
+      const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+      if (dv !== null) headers['X-Data-Version'] = String(dv);
+    }
 
     if (!isOnline && options && options.body) {
       const parsedBody = JSON.parse(options.body);
@@ -57,6 +61,17 @@ window.SyncManager = {
     try {
       const res = await fetch(path, { ...options, headers });
       const data = await res.json();
+
+      if (window.DataVersionConflictHandler) {
+        window.DataVersionConflictHandler.extractVersionFromResponse(res);
+      }
+
+      if (res.status === 409 && data.error === 'data_version_conflict') {
+        if (window.DataVersionConflictHandler) {
+          window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+        }
+        return { ...data, _dataVersionConflict: true };
+      }
 
       if (res.status === 409 && (data.error === 'version_conflict' || data.error === 'conflict_detected')) {
         return { ...data, _conflictResponse: true };

@@ -73,7 +73,19 @@ function validateDbStructure(db) {
   return errors;
 }
 
+export class DataVersionConflictError extends Error {
+  constructor(expectedVersion, currentVersion) {
+    super('DATA_VERSION_CONFLICT');
+    this.code = 'DATA_VERSION_CONFLICT';
+    this.expectedVersion = expectedVersion;
+    this.currentVersion = currentVersion;
+  }
+}
+
+let writeQueue = Promise.resolve();
+
 const seed = {
+  _dataVersion: 1,
   users: [
     { id: "u-admin", name: "管理员", role: "admin" },
     { id: "u-mei", name: "顾眉", role: "worker" },
@@ -225,6 +237,11 @@ export async function loadDb() {
     changed = true;
   }
 
+  if (!db._dataVersion) {
+    db._dataVersion = 1;
+    changed = true;
+  }
+
   if (db.projects && Array.isArray(db.projects)) {
     for (const project of db.projects) {
       if (!project.reviewRecords) {
@@ -278,42 +295,67 @@ export async function saveDb(db) {
     console.warn("Saving database with structure issues:", structureErrors);
   }
 
-  let jsonData;
+  let release;
+  const prevQueue = writeQueue;
+  const nextQueue = new Promise(r => { release = r; });
+  writeQueue = nextQueue;
+  await prevQueue;
+
   try {
-    jsonData = JSON.stringify(db, null, 2);
-    JSON.parse(jsonData);
-  } catch (error) {
-    throw new Error(`数据库序列化失败: ${error.message}`);
-  }
+    const expectedDataVersion = db._clientDataVersion != null ? db._clientDataVersion : db._dataVersion;
 
-  if (existsSync(dbPath)) {
-    try {
-      const existingData = await readFile(dbPath, "utf8");
-      const existingDb = JSON.parse(existingData);
+    if (existsSync(dbPath)) {
+      try {
+        const currentRaw = await readFile(dbPath, "utf8");
+        const currentDb = JSON.parse(currentRaw);
+        const currentFileVersion = currentDb._dataVersion || 0;
 
-      const protectCollections = ["projects", "templates", "users", "intakes", "materials", "materialMovements", "auditLogs", "offlineDrafts", "syncQueue", "reportSnapshots"];
-      for (const col of protectCollections) {
-        const oldLen = Array.isArray(existingDb[col]) ? existingDb[col].length : 0;
-        const newLen = Array.isArray(db[col]) ? db[col].length : 0;
-        if (oldLen > 0 && newLen === 0) {
-          console.warn(
-            `Data loss detected: ${col} collection would be reduced from ${oldLen} to ${newLen} items. Creating backup first.`
-          );
-          await createBackup();
-          break;
+        if (expectedDataVersion !== currentFileVersion) {
+          throw new DataVersionConflictError(expectedDataVersion, currentFileVersion);
         }
-      }
-    } catch (error) {
-      console.warn("Pre-save data integrity check failed:", error);
-    }
-  }
 
-  await createBackup();
-  await writeFile(dbPath, jsonData);
+        const protectCollections = ["projects", "templates", "users", "intakes", "materials", "materialMovements", "auditLogs", "offlineDrafts", "syncQueue", "reportSnapshots"];
+        for (const col of protectCollections) {
+          const oldLen = Array.isArray(currentDb[col]) ? currentDb[col].length : 0;
+          const newLen = Array.isArray(db[col]) ? db[col].length : 0;
+          if (oldLen > 0 && newLen === 0) {
+            console.warn(
+              `Data loss detected: ${col} collection would be reduced from ${oldLen} to ${newLen} items. Creating backup first.`
+            );
+            await createBackup();
+            break;
+          }
+        }
+      } catch (error) {
+        if (error instanceof DataVersionConflictError) throw error;
+        console.warn("Pre-save data integrity check failed:", error);
+      }
+    }
+
+    db._dataVersion = (expectedDataVersion || 0) + 1;
+
+    let jsonData;
+    try {
+      jsonData = JSON.stringify(db, null, 2);
+      JSON.parse(jsonData);
+    } catch (error) {
+      throw new Error(`数据库序列化失败: ${error.message}`);
+    }
+
+    await createBackup();
+    await writeFile(dbPath, jsonData);
+  } finally {
+    release();
+  }
 }
 
 export function sendJson(res, status, data) {
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
+  const headers = { "Content-Type": "application/json; charset=utf-8" };
+  const version = res._db ? res._db._dataVersion : res._dataVersion;
+  if (version !== undefined && version !== null) {
+    headers["X-Data-Version"] = String(version);
+  }
+  res.writeHead(status, headers);
   res.end(JSON.stringify(data, null, 2));
 }
 

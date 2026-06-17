@@ -5,7 +5,7 @@ import { join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 
-import { loadDb, sendJson } from "./src/db.js";
+import { loadDb, sendJson, DataVersionConflictError } from "./src/db.js";
 import { handleUsers } from "./src/routes/users.js";
 import { handleProjects } from "./src/routes/projects.js";
 import { handleIntakes } from "./src/routes/intakes.js";
@@ -57,6 +57,10 @@ const server = http.createServer(async (req, res) => {
     const pathname = url.pathname;
 
     const db = await loadDb();
+    res._db = db;
+    db._clientDataVersion = req.headers["x-data-version"]
+      ? Number(req.headers["x-data-version"])
+      : db._dataVersion;
 
     if (pathname.startsWith("/api/")) {
       if (pathname.startsWith("/api/sync")) {
@@ -105,7 +109,18 @@ const server = http.createServer(async (req, res) => {
 
     sendJson(res, 404, { error: "not_found" });
   } catch (error) {
-    sendJson(res, 500, { error: error.message });
+    if (error instanceof DataVersionConflictError) {
+      if (res._db) res._db._dataVersion = error.currentVersion;
+      else res._dataVersion = error.currentVersion;
+      sendJson(res, 409, {
+        error: "data_version_conflict",
+        message: "数据已被其他操作修改，请重新加载后重试",
+        clientDataVersion: error.expectedVersion,
+        serverDataVersion: error.currentVersion
+      });
+    } else {
+      sendJson(res, 500, { error: error.message });
+    }
   }
 });
 

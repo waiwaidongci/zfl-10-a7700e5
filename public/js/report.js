@@ -24,8 +24,34 @@
     const headers = { "Content-Type": "application/json" };
     const viewerId = getViewerId();
     if (viewerId) headers["X-Viewer-Id"] = viewerId;
+    if (options && options.method && options.method !== "GET") {
+      const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+      if (dv !== null) headers["X-Data-Version"] = String(dv);
+    }
     const res = await fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers }));
-    return res.json();
+    if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(res);
+    const data = await res.json();
+    if (res.status === 409 && data.error === "data_version_conflict") {
+      if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+      return { ...data, _dataVersionConflict: true };
+    }
+    return data;
+  }
+
+  function handleReportConflict(errorData, options) {
+    if (!window.DataVersionConflictHandler) {
+      alert("数据已被其他操作修改，请刷新页面后重试。");
+      location.reload();
+      return;
+    }
+    window.DataVersionConflictHandler.handleConflict(errorData, {
+      pageLabel: options && options.pageLabel ? options.pageLabel : "报告",
+      onReload: function() { location.reload(); },
+      onSaveDraft: function(data) {
+        return window.DataVersionConflictHandler.saveDraftToLocalStorage("rpt_" + Date.now(), data, "报告");
+      },
+      onRetry: options && options.onRetry ? options.onRetry : function() {}
+    });
   }
 
   function formatDate(isoString) {
@@ -415,6 +441,16 @@
           body: JSON.stringify({ name: name, note: note })
         }
       );
+
+      if (result._dataVersionConflict) {
+        handleReportConflict(result, {
+          pageLabel: "归档报告",
+          onRetry: async function() {
+            await confirmArchive();
+          }
+        });
+        return;
+      }
 
       if (result.error) {
         alert(result.message || "归档失败：" + result.error);

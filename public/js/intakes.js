@@ -9,8 +9,39 @@ function escapeHtml(s) {
 }
 
 async function api(path, options) {
-  const res = await fetch(path, options && options.body ? { ...options, headers: { "Content-Type": "application/json" } } : options);
-  return res.json();
+  const headers = { "Content-Type": "application/json" };
+  if (options && options.method && options.method !== "GET") {
+    const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+    if (dv !== null) headers["X-Data-Version"] = String(dv);
+  }
+  const res = await fetch(path, options && options.body ? { ...options, headers } : options);
+  if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(res);
+  const data = await res.json();
+  if (res.status === 409 && data.error === "data_version_conflict") {
+    if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+    return { ...data, _dataVersionConflict: true };
+  }
+  return data;
+}
+
+function handleDataVersionConflict(errorData, options) {
+  if (!window.DataVersionConflictHandler) {
+    alert("数据已被其他操作修改，请刷新页面后重试。");
+    location.reload();
+    return;
+  }
+  var formEl = options && options.formEl;
+  var formData = formEl ? window.DataVersionConflictHandler.saveFormData(formEl) : (options && options.formData);
+  window.DataVersionConflictHandler.handleConflict(errorData, {
+    pageLabel: options && options.pageLabel ? options.pageLabel : "入库",
+    formData: formData,
+    formEl: formEl,
+    onReload: function() { location.reload(); },
+    onSaveDraft: function(data) {
+      return window.DataVersionConflictHandler.saveDraftToLocalStorage("intake_" + Date.now(), data, "入库");
+    },
+    onRetry: options && options.onRetry ? options.onRetry : function() { load(); }
+  });
 }
 
 function statusClass(status) {
@@ -64,7 +95,18 @@ function render() {
   document.querySelectorAll('[data-action="delete"]').forEach((btn) => {
     btn.onclick = async () => {
       if (confirm("确定删除这条入库记录吗？")) {
-        await api('/api/intakes/' + btn.dataset.id, { method: 'DELETE' });
+        const result = await api('/api/intakes/' + btn.dataset.id, { method: 'DELETE' });
+        if (result._dataVersionConflict) {
+          handleDataVersionConflict(result, {
+            pageLabel: "删除入库记录",
+            onRetry: async () => {
+              await load();
+              await api('/api/intakes/' + btn.dataset.id, { method: 'DELETE' });
+              await load();
+            }
+          });
+          return;
+        }
         await load();
       }
     };
@@ -75,10 +117,27 @@ function render() {
       const intake = intakes.find((i) => i.id === btn.dataset.id);
       const statuses = ["待修复", "修复中", "已完成"];
       const nextIdx = (statuses.indexOf(intake.status) + 1) % statuses.length;
-      await api('/api/intakes/' + intake.id, {
+      const result = await api('/api/intakes/' + intake.id, {
         method: 'PATCH',
         body: JSON.stringify({ status: statuses[nextIdx] })
       });
+      if (result._dataVersionConflict) {
+        handleDataVersionConflict(result, {
+          pageLabel: "更新入库状态",
+          onRetry: async () => {
+            await load();
+            const updated = intakes.find(i => i.id === intake.id);
+            if (updated) {
+              await api('/api/intakes/' + intake.id, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: statuses[nextIdx] })
+              });
+            }
+            await load();
+          }
+        });
+        return;
+      }
       await load();
     };
   });
@@ -92,7 +151,22 @@ async function load() {
 form.onsubmit = async (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(form).entries());
-  await api("/api/intakes", { method: "POST", body: JSON.stringify(data) });
+  const result = await api("/api/intakes", { method: "POST", body: JSON.stringify(data) });
+  if (result._dataVersionConflict) {
+    handleDataVersionConflict(result, {
+      formEl: form,
+      pageLabel: "新建入库记录",
+      onRetry: async () => {
+        await load();
+        const retryResult = await api("/api/intakes", { method: "POST", body: JSON.stringify(data) });
+        if (!retryResult.error && !retryResult._dataVersionConflict) {
+          form.reset();
+        }
+        await load();
+      }
+    });
+    return;
+  }
   form.reset();
   await load();
 };

@@ -17,8 +17,39 @@ function escapeHtml(s) {
 }
 
 async function api(path, options) {
-  const res = await fetch(path, options && options.body ? { ...options, headers: { "Content-Type": "application/json" } } : options);
-  return res.json();
+  const headers = { "Content-Type": "application/json" };
+  if (options && options.method && options.method !== "GET") {
+    const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+    if (dv !== null) headers["X-Data-Version"] = String(dv);
+  }
+  const res = await fetch(path, options && options.body ? { ...options, headers } : options);
+  if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(res);
+  const data = await res.json();
+  if (res.status === 409 && data.error === "data_version_conflict") {
+    if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+    return { ...data, _dataVersionConflict: true };
+  }
+  return data;
+}
+
+function handleDataVersionConflict(errorData, options) {
+  if (!window.DataVersionConflictHandler) {
+    alert("数据已被其他操作修改，请刷新页面后重试。");
+    location.reload();
+    return;
+  }
+  var formEl = options && options.formEl;
+  var formData = formEl ? window.DataVersionConflictHandler.saveFormData(formEl) : (options && options.formData);
+  window.DataVersionConflictHandler.handleConflict(errorData, {
+    pageLabel: options && options.pageLabel ? options.pageLabel : "材料",
+    formData: formData,
+    formEl: formEl,
+    onReload: function() { location.reload(); },
+    onSaveDraft: function(data) {
+      return window.DataVersionConflictHandler.saveDraftToLocalStorage("mat_" + Date.now(), data, "材料");
+    },
+    onRetry: options && options.onRetry ? options.onRetry : function() { load(); }
+  });
 }
 
 function isLowStock(m) {
@@ -71,7 +102,18 @@ function render() {
   document.querySelectorAll("button[data-delete]").forEach((btn) => {
     btn.onclick = async () => {
       if (confirm("确定要删除这个材料吗？")) {
-        await api("/api/materials/" + btn.dataset.delete, { method: "DELETE" });
+        const result = await api("/api/materials/" + btn.dataset.delete, { method: "DELETE" });
+        if (result._dataVersionConflict) {
+          handleDataVersionConflict(result, {
+            pageLabel: "删除材料",
+            onRetry: async () => {
+              await load();
+              await api("/api/materials/" + btn.dataset.delete, { method: "DELETE" });
+              await load();
+            }
+          });
+          return;
+        }
         await load();
       }
     };
@@ -217,16 +259,52 @@ form.onsubmit = async (event) => {
   const data = Object.fromEntries(new FormData(form).entries());
 
   if (editingId) {
-    await api("/api/materials/" + editingId, {
+    const result = await api("/api/materials/" + editingId, {
       method: "PATCH",
       body: JSON.stringify(data)
     });
+    if (result._dataVersionConflict) {
+      handleDataVersionConflict(result, {
+        formEl: form,
+        pageLabel: "编辑材料",
+        onRetry: async () => {
+          await load();
+          const retryResult = await api("/api/materials/" + editingId, {
+            method: "PATCH",
+            body: JSON.stringify(data)
+          });
+          if (!retryResult.error && !retryResult._dataVersionConflict) {
+            cancelEdit();
+          }
+          await load();
+        }
+      });
+      return;
+    }
     cancelEdit();
   } else {
-    await api("/api/materials", {
+    const result = await api("/api/materials", {
       method: "POST",
       body: JSON.stringify(data)
     });
+    if (result._dataVersionConflict) {
+      handleDataVersionConflict(result, {
+        formEl: form,
+        pageLabel: "新建材料",
+        onRetry: async () => {
+          await load();
+          const retryResult = await api("/api/materials", {
+            method: "POST",
+            body: JSON.stringify(data)
+          });
+          if (!retryResult.error && !retryResult._dataVersionConflict) {
+            form.reset();
+          }
+          await load();
+        }
+      });
+      return;
+    }
     form.reset();
   }
 

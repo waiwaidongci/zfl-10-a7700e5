@@ -25,11 +25,37 @@ async function api(path, options) {
   if (currentUser) {
     headers["X-Viewer-Id"] = currentUser.id;
   }
+  if (options && options.method && options.method !== "GET") {
+    const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+    if (dv !== null) headers["X-Data-Version"] = String(dv);
+  }
   const res = await fetch(path, {
     ...options,
     headers: options && options.body ? { ...headers, ...options.headers } : headers
   });
-  return res.json();
+  if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(res);
+  const data = await res.json();
+  if (res.status === 409 && data.error === "data_version_conflict") {
+    if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+    return { ...data, _dataVersionConflict: true };
+  }
+  return data;
+}
+
+function handleDataVersionConflict(errorData, options) {
+  if (!window.DataVersionConflictHandler) {
+    alert("数据已被其他操作修改，请刷新页面后重试。");
+    location.reload();
+    return;
+  }
+  window.DataVersionConflictHandler.handleConflict(errorData, {
+    pageLabel: options && options.pageLabel ? options.pageLabel : "复核",
+    onReload: function() { location.reload(); },
+    onSaveDraft: function(data) {
+      return window.DataVersionConflictHandler.saveDraftToLocalStorage("review_" + Date.now(), data, "复核");
+    },
+    onRetry: options && options.onRetry ? options.onRetry : function() { load(); }
+  });
 }
 
 function renderStats() {
@@ -294,6 +320,27 @@ async function submitReview(result) {
       method: "POST",
       body: JSON.stringify({ result, opinion })
     });
+
+    if (res._dataVersionConflict) {
+      handleDataVersionConflict(res, {
+        pageLabel: "提交复核",
+        onRetry: async () => {
+          await load();
+          if (selectedProject) {
+            const retryRes = await api("/api/projects/" + selectedProject.id + "/review", {
+              method: "POST",
+              body: JSON.stringify({ result, opinion })
+            });
+            if (!retryRes.error && !retryRes._dataVersionConflict) {
+              alert("复核已提交，项目状态已更新为：" + retryRes.project.status);
+              closeModal();
+            }
+          }
+          await load();
+        }
+      });
+      return;
+    }
 
     if (res.error) {
       alert("操作失败：" + (res.message || res.error));

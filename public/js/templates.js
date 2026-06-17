@@ -13,8 +13,38 @@ let expandedVersionId = null;
 async function api(path, options) {
   const headers = { "Content-Type": "application/json" };
   if (viewer && viewer.value) headers["X-Viewer-Id"] = viewer.value;
+  if (options && options.method && options.method !== "GET") {
+    const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+    if (dv !== null) headers["X-Data-Version"] = String(dv);
+  }
   const res = await fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers }));
-  return res.json();
+  if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(res);
+  const data = await res.json();
+  if (res.status === 409 && data.error === "data_version_conflict") {
+    if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+    return { ...data, _dataVersionConflict: true };
+  }
+  return data;
+}
+
+function handleDataVersionConflict(errorData, options) {
+  if (!window.DataVersionConflictHandler) {
+    alert("数据已被其他操作修改，请刷新页面后重试。");
+    location.reload();
+    return;
+  }
+  var formEl = options && options.formEl;
+  var formData = formEl ? window.DataVersionConflictHandler.saveFormData(formEl) : (options && options.formData);
+  window.DataVersionConflictHandler.handleConflict(errorData, {
+    pageLabel: options && options.pageLabel ? options.pageLabel : "模板",
+    formData: formData,
+    formEl: formEl,
+    onReload: function() { location.reload(); },
+    onSaveDraft: function(data) {
+      return window.DataVersionConflictHandler.saveDraftToLocalStorage("tpl_" + Date.now(), data, "模板");
+    },
+    onRetry: options && options.onRetry ? options.onRetry : function() { load(); }
+  });
 }
 
 function escapeHtml(s) {
@@ -125,6 +155,17 @@ async function render() {
     btn.onclick = async () => {
       if (!confirm("确定删除该模板？已有项目不受影响。")) return;
       const result = await api("/api/templates/" + btn.dataset.delete, { method: "DELETE" });
+      if (result._dataVersionConflict) {
+        handleDataVersionConflict(result, {
+          pageLabel: "删除模板",
+          onRetry: async () => {
+            await load();
+            await api("/api/templates/" + btn.dataset.delete, { method: "DELETE" });
+            await load();
+          }
+        });
+        return;
+      }
       if (result.error) {
         alert(result.message || result.error);
         return;
@@ -158,6 +199,24 @@ async function render() {
         method: "PATCH",
         body: JSON.stringify(data)
       });
+      if (result._dataVersionConflict) {
+        handleDataVersionConflict(result, {
+          formEl: form,
+          pageLabel: "编辑模板",
+          onRetry: async () => {
+            await load();
+            const retryResult = await api("/api/templates/" + form.dataset.editForm, {
+              method: "PATCH",
+              body: JSON.stringify(data)
+            });
+            if (!retryResult.error && !retryResult._dataVersionConflict) {
+              editingId = null;
+            }
+            await load();
+          }
+        });
+        return;
+      }
       if (result.error) {
         alert(result.errors ? result.errors.join("\n") : (result.message || result.error));
         return;
@@ -220,6 +279,22 @@ form.onsubmit = async (e) => {
   data.estimatedDays = Number(data.estimatedDays);
   data.reviewRequired = form.querySelector('[name="reviewRequired"]').checked;
   const result = await api("/api/templates", { method: "POST", body: JSON.stringify(data) });
+  if (result._dataVersionConflict) {
+    handleDataVersionConflict(result, {
+      formEl: form,
+      pageLabel: "新建模板",
+      onRetry: async () => {
+        await load();
+        const retryResult = await api("/api/templates", { method: "POST", body: JSON.stringify(data) });
+        if (!retryResult.error && !retryResult._dataVersionConflict) {
+          form.reset();
+          form.querySelector('[name="reviewRequired"]').checked = true;
+        }
+        await load();
+      }
+    });
+    return;
+  }
   if (result.error) {
     alert(result.errors ? result.errors.join("\n") : (result.message || result.error));
     return;

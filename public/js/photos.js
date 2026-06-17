@@ -25,7 +25,36 @@
     const viewerId = viewerEl ? viewerEl.value : "";
     const headers = { "Content-Type": "application/json" };
     if (viewerId) headers["X-Viewer-Id"] = viewerId;
-    return fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers })).then(r => r.json());
+    if (options && options.method && options.method !== "GET") {
+      const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+      if (dv !== null) headers["X-Data-Version"] = String(dv);
+    }
+    return fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers })).then(function(r) {
+      if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(r);
+      return r.json().then(function(data) {
+        if (r.status === 409 && data.error === "data_version_conflict") {
+          if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+          return { ...data, _dataVersionConflict: true };
+        }
+        return data;
+      });
+    });
+  }
+
+  function handlePhotoConflict(errorData, options) {
+    if (!window.DataVersionConflictHandler) {
+      alert("数据已被其他操作修改，请刷新页面后重试。");
+      location.reload();
+      return;
+    }
+    window.DataVersionConflictHandler.handleConflict(errorData, {
+      pageLabel: options && options.pageLabel ? options.pageLabel : "照片",
+      onReload: function() { location.reload(); },
+      onSaveDraft: function(data) {
+        return window.DataVersionConflictHandler.saveDraftToLocalStorage("photo_" + Date.now(), data, "照片");
+      },
+      onRetry: options && options.onRetry ? options.onRetry : function() {}
+    });
   }
 
   function escapeHtml(s) {
@@ -267,6 +296,25 @@
       body: JSON.stringify({ stage: stage, url: url, basePhotoCount: (photosCurrentArchive[stage] || []).length, basePhotoList: [...(photosCurrentArchive[stage] || [])] })
     });
 
+    if (res._dataVersionConflict) {
+      handlePhotoConflict(res, {
+        pageLabel: "添加照片",
+        onRetry: async function() {
+          await window.Photos.refresh();
+          var retryRes = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos", {
+            method: "POST",
+            body: JSON.stringify({ stage: stage, url: url, basePhotoCount: (photosCurrentArchive[stage] || []).length, basePhotoList: [...(photosCurrentArchive[stage] || [])] })
+          });
+          if (!retryRes.error && !retryRes._dataVersionConflict) {
+            photosCurrentArchive = sanitizeArchive(retryRes);
+            if (input) input.value = "";
+            renderBody();
+          }
+        }
+      });
+      return;
+    }
+
     if (res.error) {
       alert(res.message || "添加失败");
       return;
@@ -298,6 +346,24 @@
       method: "DELETE",
       body: JSON.stringify({ stage: stage, index: index, url: url, basePhotoCount: (photosCurrentArchive[stage] || []).length, basePhotoList: [...(photosCurrentArchive[stage] || [])] })
     });
+
+    if (res._dataVersionConflict) {
+      handlePhotoConflict(res, {
+        pageLabel: "删除照片",
+        onRetry: async function() {
+          await window.Photos.refresh();
+          var retryRes = await photosApi("/api/projects/" + photosCurrentProjectId + "/photos", {
+            method: "DELETE",
+            body: JSON.stringify({ stage: stage, index: index, url: url, basePhotoCount: (photosCurrentArchive[stage] || []).length, basePhotoList: [...(photosCurrentArchive[stage] || [])] })
+          });
+          if (!retryRes.error && !retryRes._dataVersionConflict) {
+            photosCurrentArchive = sanitizeArchive(retryRes);
+            renderBody();
+          }
+        }
+      });
+      return;
+    }
 
     if (res.error) {
       alert(res.message || "删除失败");

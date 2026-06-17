@@ -30,8 +30,43 @@ async function api(path, options) {
   }
   const headers = { "Content-Type": "application/json" };
   if (viewer && viewer.value) headers["X-Viewer-Id"] = viewer.value;
+  if (options && options.method && options.method !== "GET") {
+    const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+    if (dv !== null) headers["X-Data-Version"] = String(dv);
+  }
   const res = await fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers }));
-  return res.json();
+  if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(res);
+  const data = await res.json();
+  if (res.status === 409 && data.error === "data_version_conflict") {
+    if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+    return { ...data, _dataVersionConflict: true };
+  }
+  return data;
+}
+
+function handleDataVersionConflict(errorData, options) {
+  if (!window.DataVersionConflictHandler) {
+    alert("数据已被其他操作修改，请刷新页面后重试。");
+    location.reload();
+    return;
+  }
+  var formEl = options && options.formEl;
+  var formData = formEl ? window.DataVersionConflictHandler.saveFormData(formEl) : (options && options.formData);
+  window.DataVersionConflictHandler.handleConflict(errorData, {
+    pageLabel: options && options.pageLabel ? options.pageLabel : "项目",
+    formData: formData,
+    formEl: formEl,
+    onReload: function() { location.reload(); },
+    onSaveDraft: function(data) {
+      if (window.SyncManager && data) {
+        return false;
+      }
+      return window.DataVersionConflictHandler.saveDraftToLocalStorage("proj_" + Date.now(), data, "项目");
+    },
+    onRetry: options && options.onRetry ? options.onRetry : function() {
+      load();
+    }
+  });
 }
 
 function isOverdue(project) {
@@ -271,7 +306,21 @@ function render() {
     const project = projects.find((item) => item.id === select.dataset.id);
     select.value = project.status;
     select.onchange = async () => {
-      await api('/api/projects/' + project.id, { method: 'PATCH', body: JSON.stringify({ status: select.value }) });
+      const result = await api('/api/projects/' + project.id, { method: 'PATCH', body: JSON.stringify({ status: select.value }) });
+      if (result._dataVersionConflict) {
+        handleDataVersionConflict(result, {
+          pageLabel: "项目状态",
+          onRetry: async () => {
+            await load();
+            const updatedProject = projects.find(p => p.id === project.id);
+            if (updatedProject) {
+              await api('/api/projects/' + updatedProject.id, { method: 'PATCH', body: JSON.stringify({ status: select.value }) });
+              await load();
+            }
+          }
+        });
+        return;
+      }
       await load();
     };
   });
@@ -596,6 +645,25 @@ form.onsubmit = async (event) => {
 
   try {
     const result = await api("/api/projects", { method: "POST", body: JSON.stringify(data) });
+
+    if (result._dataVersionConflict) {
+      handleDataVersionConflict(result, {
+        formEl: form,
+        pageLabel: "新建项目",
+        onRetry: async () => {
+          await load();
+          const retryResult = await api("/api/projects", { method: "POST", body: JSON.stringify(data) });
+          if (!retryResult.error && !retryResult._dataVersionConflict) {
+            form.reset();
+            intakeInfo.style.display = 'none';
+            if (templateSelector) templateSelector.reset();
+            stockHint.style.display = 'none';
+          }
+          await load();
+        }
+      });
+      return;
+    }
 
     if (result._savedAsDraft) {
       alert('网络不可用，已保存为本地草稿。恢复连接后可在同步管理中手动同步。');

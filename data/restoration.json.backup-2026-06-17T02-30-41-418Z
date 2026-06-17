@@ -850,30 +850,6 @@
   ],
   "materials": [
     {
-      "id": "M-1781663589792",
-      "name": "FinalTest",
-      "unit": "个",
-      "quantity": 1,
-      "lowStockThreshold": 1,
-      "updatedAt": "2026-06-17"
-    },
-    {
-      "id": "M-1781663500904",
-      "name": "VerTest3",
-      "unit": "个",
-      "quantity": 3,
-      "lowStockThreshold": 1,
-      "updatedAt": "2026-06-17"
-    },
-    {
-      "id": "M-1781663441417",
-      "name": "VerTest1",
-      "unit": "个",
-      "quantity": 3,
-      "lowStockThreshold": 1,
-      "updatedAt": "2026-06-17"
-    },
-    {
       "id": "M-1781663384295",
       "name": "TestMaterial2",
       "unit": "个",
@@ -2489,6 +2465,6 @@
       }
     }
   ],
-  "_dataVersion": 4,
-  "_clientDataVersion": 3
+  "_dataVersion": 1,
+  "_clientDataVersion": 1
 }
