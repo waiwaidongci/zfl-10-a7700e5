@@ -89,9 +89,8 @@ function applyTemplateToProjectOnUpdate(project, templateId, db) {
   }
 }
 
-function buildCreateAuditPayload(db, project, viewer, viewerId, templateSnapshot, intakeId) {
+function buildCreateAuditPayload(project, viewer, viewerId, templateSnapshot, intakeId) {
   return {
-    db,
     projectId: project.id,
     actionType: ACTION_TYPES.PROJECT_CREATE,
     operator: viewer ? viewer.name : "未知用户",
@@ -103,10 +102,9 @@ function buildCreateAuditPayload(db, project, viewer, viewerId, templateSnapshot
   };
 }
 
-function buildUpdateAuditPayload(db, project, viewer, viewerId, beforeState, statusChanged) {
+function buildUpdateAuditPayload(project, viewer, viewerId, beforeState, statusChanged) {
   const actionType = statusChanged ? ACTION_TYPES.STATUS_CHANGE : ACTION_TYPES.PROJECT_UPDATE;
   return {
-    db,
     projectId: project.id,
     actionType,
     operator: viewer ? viewer.name : "未知用户",
@@ -117,14 +115,13 @@ function buildUpdateAuditPayload(db, project, viewer, viewerId, beforeState, sta
   };
 }
 
-function buildSyncAuditPayload(db, project, viewer, beforeState, template, oldVersion, newVersion, syncedFields) {
+function buildSyncAuditPayload(project, viewer, beforeState, template, oldVersion, newVersion, syncedFields) {
   const fieldLabels = [];
   if (syncedFields.steps) fieldLabels.push("修复步骤");
   if (syncedFields.materials) fieldLabels.push("使用材料");
   if (syncedFields.estimatedDays) fieldLabels.push("预计工期");
   if (syncedFields.reviewRequired || syncedFields.reviewNotes) fieldLabels.push("复核要求");
   return {
-    db,
     projectId: project.id,
     actionType: ACTION_TYPES.TEMPLATE_SYNC,
     operator: viewer.name,
@@ -261,7 +258,7 @@ async function handleCreateProject(req, res, db) {
     }
   }
 
-  recordAudit(buildCreateAuditPayload(db, project, viewer, viewerId, templateSnapshot, intakeId));
+  recordAudit(db, buildCreateAuditPayload(project, viewer, viewerId, templateSnapshot, intakeId));
 
   await saveDb(db);
   return sendJson(res, 201, project);
@@ -297,7 +294,7 @@ async function handleUpdateProject(req, res, db, projectId) {
 
   const statusChanged = handleStatusChange(project, permResult.viewer, viewerId, oldStatus, body.status);
 
-  recordAudit(buildUpdateAuditPayload(db, project, permResult.viewer, viewerId, beforeState, statusChanged));
+  recordAudit(db, buildUpdateAuditPayload(project, permResult.viewer, viewerId, beforeState, statusChanged));
 
   await saveDb(db);
   return sendJson(res, 200, project);
@@ -438,7 +435,7 @@ async function handleSyncTemplate(req, res, db, projectId) {
   incrementVersion(project);
   project.updatedAt = new Date().toISOString().slice(0, 10);
 
-  recordAudit(buildSyncAuditPayload(db, project, permResult.viewer, beforeState, template, oldVersion, newVersion, syncedFields));
+  recordAudit(db, buildSyncAuditPayload(project, permResult.viewer, beforeState, template, oldVersion, newVersion, syncedFields));
 
   await saveDb(db);
   return sendJson(res, 200, {
