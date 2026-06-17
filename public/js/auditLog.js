@@ -37,7 +37,37 @@ function api(path, options) {
   const viewerId = viewerEl ? viewerEl.value : '';
   const headers = { "Content-Type": "application/json" };
   if (viewerId) headers["X-Viewer-Id"] = viewerId;
-  return fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers })).then(r => r.json());
+  if (options && options.method && options.method !== "GET") {
+    const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+    if (dv !== null) headers["X-Data-Version"] = String(dv);
+  }
+  return fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers }))
+    .then(function(r) {
+      if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(r);
+      return r.json().then(function(data) {
+        if (r.status === 409 && data.error === "data_version_conflict") {
+          if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+          return { ...data, _dataVersionConflict: true };
+        }
+        return data;
+      });
+    });
+}
+
+function handleAuditConflict(errorData, options) {
+  if (!window.DataVersionConflictHandler) {
+    alert("数据已被其他操作修改，请刷新页面后重试。");
+    location.reload();
+    return;
+  }
+  window.DataVersionConflictHandler.handleConflict(errorData, {
+    pageLabel: options && options.pageLabel ? options.pageLabel : "审计回滚",
+    onReload: function() { location.reload(); },
+    onSaveDraft: function(data) {
+      return window.DataVersionConflictHandler.saveDraftToLocalStorage("audit_" + Date.now(), data, "审计回滚");
+    },
+    onRetry: options && options.onRetry ? options.onRetry : function() {}
+  });
 }
 
 function escapeHtml(s) {
@@ -534,6 +564,52 @@ async function confirmRollback() {
         reason: reason
       })
     });
+
+    if (result._dataVersionConflict) {
+      handleAuditConflict(result, {
+        pageLabel: "审计回滚",
+        onRetry: async function() {
+          try {
+            auditLogs = await api('/api/projects/' + auditProjectId + '/audit-logs');
+            const retryResult = await api('/api/projects/' + auditProjectId + '/rollback', {
+              method: 'POST',
+              body: JSON.stringify({
+                targetLogId: auditRollbackPreview.targetLogId,
+                reason: reason
+              })
+            });
+            if (!retryResult._dataVersionConflict && !retryResult.error) {
+              alert('回滚成功！');
+              auditLogs = await api('/api/projects/' + auditProjectId + '/audit-logs');
+              auditSelectedLogId = null;
+              auditRollbackPreview = null;
+              const countEl = document.querySelector('.audit-count');
+              if (countEl) countEl.textContent = '共 ' + auditLogs.length + ' 条记录';
+              renderTimeline();
+              document.getElementById('audit-detail').style.display = 'none';
+              document.getElementById('audit-rollback-preview').style.display = 'none';
+              if (typeof window.onAuditRollback === 'function') {
+                window.onAuditRollback(auditProjectId);
+              }
+            } else if (retryResult.error) {
+              alert('回滚失败：' + (retryResult.message || retryResult.error));
+            }
+          } catch (e) {
+            alert('重试失败：' + e.message);
+          } finally {
+            if (confirmBtn) {
+              confirmBtn.disabled = false;
+              confirmBtn.textContent = '确认回滚';
+            }
+          }
+        }
+      });
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '确认回滚';
+      }
+      return;
+    }
 
     if (result.error) {
       alert('回滚失败：' + (result.message || result.error));

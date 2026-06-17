@@ -850,14 +850,6 @@
   ],
   "materials": [
     {
-      "id": "M-1781667432303",
-      "name": "VersionTest",
-      "unit": "个",
-      "quantity": 1,
-      "lowStockThreshold": 1,
-      "updatedAt": "2026-06-17"
-    },
-    {
       "id": "M-1781663589792",
       "name": "FinalTest",
       "unit": "个",
@@ -2497,6 +2489,6 @@
       }
     }
   ],
-  "_dataVersion": 5,
-  "_clientDataVersion": 4
+  "_dataVersion": 4,
+  "_clientDataVersion": 3
 }

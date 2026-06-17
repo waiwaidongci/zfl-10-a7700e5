@@ -67,7 +67,39 @@
       const viewerId = viewerEl ? viewerEl.value : "";
       const headers = { "Content-Type": "application/json" };
       if (viewerId) headers["X-Viewer-Id"] = viewerId;
-      return fetch(path, opts && opts.body ? Object.assign({}, opts, { headers }) : (opts ? Object.assign({}, opts, { headers }) : { headers })).then(r => r.json());
+      if (opts && opts.method && opts.method !== "GET") {
+        const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+        if (dv !== null) headers["X-Data-Version"] = String(dv);
+      }
+      const self = this;
+      return fetch(path, opts && opts.body ? Object.assign({}, opts, { headers }) : (opts ? Object.assign({}, opts, { headers }) : { headers }))
+        .then(function(r) {
+          if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(r);
+          return r.json().then(function(data) {
+            if (r.status === 409 && data.error === "data_version_conflict") {
+              if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+              return { ...data, _dataVersionConflict: true };
+            }
+            return data;
+          });
+        });
+    }
+
+    _handleConflict(errorData, options) {
+      if (!window.DataVersionConflictHandler) {
+        alert("数据已被其他操作修改，请刷新页面后重试。");
+        location.reload();
+        return;
+      }
+      const self = this;
+      window.DataVersionConflictHandler.handleConflict(errorData, {
+        pageLabel: options && options.pageLabel ? options.pageLabel : "照片",
+        onReload: function() { location.reload(); },
+        onSaveDraft: function(data) {
+          return window.DataVersionConflictHandler.saveDraftToLocalStorage("pg_" + Date.now(), data, "照片");
+        },
+        onRetry: options && options.onRetry ? options.onRetry : function() {}
+      });
     }
 
     render() {
@@ -206,6 +238,36 @@
             method: "POST",
             body: JSON.stringify({ stage: stage, url: url, basePhotoCount: (this.archive[stage] || []).length, basePhotoList: [...(this.archive[stage] || [])] })
           });
+          if (res._dataVersionConflict) {
+            const self = this;
+            this._handleConflict(res, {
+              pageLabel: "添加照片",
+              onRetry: async function() {
+                try {
+                  const refreshRes = await self._api("/api/projects/" + self.projectId + "/photos");
+                  if (!refreshRes.error) {
+                    self.archive = sanitizeArchive(refreshRes);
+                    const retryRes = await self._api("/api/projects/" + self.projectId + "/photos", {
+                      method: "POST",
+                      body: JSON.stringify({ stage: stage, url: url, basePhotoCount: (self.archive[stage] || []).length, basePhotoList: [...(self.archive[stage] || [])] })
+                    });
+                    if (!retryRes._dataVersionConflict && !retryRes.error) {
+                      self.archive = sanitizeArchive(retryRes);
+                      const input = self.container.querySelector('.pg-add-input[data-stage="' + stage + '"]');
+                      if (input) input.value = "";
+                      self.render();
+                      self._notifyUpdate();
+                    } else if (retryRes.error) {
+                      alert(retryRes.message || "添加失败");
+                    }
+                  }
+                } catch (e) {
+                  alert("重试失败: " + e.message);
+                }
+              }
+            });
+            return;
+          }
           if (res.error) {
             alert(res.message || "添加失败");
             return;
@@ -242,6 +304,36 @@
             method: "DELETE",
             body: JSON.stringify({ stage: stage, index: index, url: url, basePhotoCount: (this.archive[stage] || []).length, basePhotoList: [...(this.archive[stage] || [])] })
           });
+          if (res._dataVersionConflict) {
+            const self = this;
+            this._handleConflict(res, {
+              pageLabel: "删除照片",
+              onRetry: async function() {
+                try {
+                  const refreshRes = await self._api("/api/projects/" + self.projectId + "/photos");
+                  if (!refreshRes.error) {
+                    self.archive = sanitizeArchive(refreshRes);
+                    const retryRes = await self._api("/api/projects/" + self.projectId + "/photos", {
+                      method: "DELETE",
+                      body: JSON.stringify({ stage: stage, index: index, url: url, basePhotoCount: (self.archive[stage] || []).length, basePhotoList: [...(self.archive[stage] || [])] })
+                    });
+                    if (!retryRes._dataVersionConflict && !retryRes.error) {
+                      self.archive = sanitizeArchive(retryRes);
+                      self.render();
+                      self._notifyUpdate();
+                      return true;
+                    } else if (retryRes.error) {
+                      alert(retryRes.message || "删除失败");
+                    }
+                  }
+                } catch (e) {
+                  alert("删除失败: " + e.message);
+                }
+                return false;
+              }
+            });
+            return;
+          }
           if (res.error) {
             alert(res.message || "删除失败");
             return;

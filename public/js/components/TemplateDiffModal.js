@@ -57,8 +57,9 @@
 
       try {
         const res = await fetch("/api/projects/" + encodeURIComponent(this.options.projectId) + "/template-diff", {
-          headers: this._getHeaders()
+          headers: this._getHeaders("GET")
         });
+        if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(res);
         const data = await res.json();
         if (data.error) {
           alert("加载失败：" + (data.message || data.error));
@@ -91,11 +92,31 @@
       }
     }
 
-    _getHeaders() {
+    _getHeaders(method) {
       const viewer = document.querySelector("#viewer");
       const headers = { "Content-Type": "application/json" };
       if (viewer && viewer.value) headers["X-Viewer-Id"] = viewer.value;
+      if (method && method !== "GET") {
+        const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+        if (dv !== null) headers["X-Data-Version"] = String(dv);
+      }
       return headers;
+    }
+
+    _handleConflict(errorData, options) {
+      if (!window.DataVersionConflictHandler) {
+        alert("数据已被其他操作修改，请刷新页面后重试。");
+        location.reload();
+        return;
+      }
+      window.DataVersionConflictHandler.handleConflict(errorData, {
+        pageLabel: options && options.pageLabel ? options.pageLabel : "模板同步",
+        onReload: function() { location.reload(); },
+        onSaveDraft: function(data) {
+          return window.DataVersionConflictHandler.saveDraftToLocalStorage("tdm_" + Date.now(), data, "模板同步");
+        },
+        onRetry: options && options.onRetry ? options.onRetry : function() {}
+      });
     }
 
     render() {
@@ -372,10 +393,56 @@
       try {
         const res = await fetch("/api/projects/" + encodeURIComponent(this.options.projectId) + "/sync-template", {
           method: "POST",
-          headers: this._getHeaders(),
+          headers: this._getHeaders("POST"),
           body: JSON.stringify({ fields: this.selectedFields })
         });
+        if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(res);
         const data = await res.json();
+
+        if (res.status === 409 && data.error === "data_version_conflict") {
+          if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+          const self = this;
+          this._handleConflict(data, {
+            pageLabel: "模板同步",
+            onRetry: async function() {
+              try {
+                const retryRes = await fetch("/api/projects/" + encodeURIComponent(self.options.projectId) + "/sync-template", {
+                  method: "POST",
+                  headers: self._getHeaders("POST"),
+                  body: JSON.stringify({ fields: self.selectedFields })
+                });
+                if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(retryRes);
+                const retryData = await retryRes.json();
+                if (retryRes.ok && !retryData._dataVersionConflict && !retryData.error) {
+                  alert([
+                    "✅ 同步成功！",
+                    "",
+                    "模板版本：v" + (retryData.oldVersion || 0) + " → v" + (retryData.newVersion || 0),
+                    "已同步字段：",
+                    ...(Object.keys(retryData.syncedFields || {}).filter(k => retryData.syncedFields[k]).map(k => "  · " + FIELD_CONFIG[k].label))
+                  ].join("\n"));
+                  self.close();
+                  if (typeof self.options.onSyncSuccess === "function") {
+                    self.options.onSyncSuccess(retryData);
+                  }
+                } else if (retryData.error) {
+                  alert("同步失败：" + (retryData.message || retryData.error));
+                  if (syncBtn) {
+                    syncBtn.disabled = false;
+                    syncBtn.innerHTML = '✨ 同步选中项到项目（' + Object.values(self.selectedFields).filter(Boolean).length + ' 项）';
+                  }
+                }
+              } catch (e) {
+                alert("重试失败：" + e.message);
+                if (syncBtn) {
+                  syncBtn.disabled = false;
+                  syncBtn.innerHTML = '✨ 同步选中项到项目（' + Object.values(self.selectedFields).filter(Boolean).length + ' 项）';
+                }
+              }
+            }
+          });
+          return;
+        }
 
         if (data.error) {
           alert("同步失败：" + (data.message || data.error));

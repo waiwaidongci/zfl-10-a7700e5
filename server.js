@@ -58,7 +58,18 @@ const server = http.createServer(async (req, res) => {
 
     const db = await loadDb();
     res._db = db;
-    db._clientDataVersion = req.headers["x-data-version"]
+
+    const writeMethods = ["POST", "PATCH", "PUT", "DELETE"];
+    const hasVersionHeader = req.headers["x-data-version"] !== undefined;
+    if (writeMethods.includes(req.method) && !hasVersionHeader) {
+      sendJson(res, 400, {
+        error: "missing_data_version",
+        message: "写操作必须携带 X-Data-Version 请求头"
+      });
+      return;
+    }
+
+    db._clientDataVersion = hasVersionHeader
       ? Number(req.headers["x-data-version"])
       : db._dataVersion;
 

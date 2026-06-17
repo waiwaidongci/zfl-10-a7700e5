@@ -13,8 +13,17 @@ async function api(path, options) {
   const viewerId = viewerEl ? viewerEl.value : '';
   const headers = { "Content-Type": "application/json" };
   if (viewerId) headers["X-Viewer-Id"] = viewerId;
+  if (options && options.method && options.method !== "GET") {
+    const dv = window.DataVersionConflictHandler ? window.DataVersionConflictHandler.getVersion() : null;
+    if (dv !== null) headers["X-Data-Version"] = String(dv);
+  }
   const res = await fetch(path, options && options.body ? { ...options, headers } : (options ? { ...options, headers } : { headers }));
+  if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.extractVersionFromResponse(res);
   const data = await res.json();
+  if (res.status === 409 && data.error === "data_version_conflict") {
+    if (window.DataVersionConflictHandler) window.DataVersionConflictHandler.updateVersion(data.serverDataVersion);
+    return { ...data, _dataVersionConflict: true };
+  }
   if (!res.ok) {
     const err = new Error(data.message || data.error || '请求失败');
     err.error = data.error;
@@ -22,6 +31,22 @@ async function api(path, options) {
     throw err;
   }
   return data;
+}
+
+function handleTimelineConflict(errorData, options) {
+  if (!window.DataVersionConflictHandler) {
+    alert("数据已被其他操作修改，请刷新页面后重试。");
+    location.reload();
+    return;
+  }
+  window.DataVersionConflictHandler.handleConflict(errorData, {
+    pageLabel: options && options.pageLabel ? options.pageLabel : "时间线",
+    onReload: function() { location.reload(); },
+    onSaveDraft: function(data) {
+      return window.DataVersionConflictHandler.saveDraftToLocalStorage("tl_" + Date.now(), data, "时间线");
+    },
+    onRetry: options && options.onRetry ? options.onRetry : function() {}
+  });
 }
 
 window.Timeline = {
@@ -313,6 +338,38 @@ async function _timelineSubmitRecord() {
       body: JSON.stringify(payload)
     });
 
+    if (res._dataVersionConflict) {
+      handleTimelineConflict(res, {
+        pageLabel: "添加时间线记录",
+        onRetry: async function() {
+          try {
+            currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
+            currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
+            const retryRes = await api('/api/projects/' + currentProjectId + '/timeline', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+            if (!retryRes._dataVersionConflict && !retryRes.error) {
+              currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
+              currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
+              document.getElementById('timeline-form-wrap').style.display = 'none';
+              document.getElementById('timeline-add-btn').style.display = 'inline-block';
+              _timelineRenderList();
+              if (typeof window.onTimelineUpdated === 'function') {
+                window.onTimelineUpdated(currentProjectId, currentRecords);
+              }
+              _timelineShowAlert('记录已添加，材料库存已自动扣减', false);
+            }
+          } catch (e) {
+            _timelineShowAlert(e.message || '重试失败', true);
+          }
+        }
+      });
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+      return;
+    }
+
     if (res._savedAsDraft) {
       _timelineShowAlert('网络不可用，已保存为本地草稿，联网后可在同步管理中上传', false);
       currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
@@ -391,6 +448,37 @@ async function _timelineDeleteRecord(recordId, isDraft, draftId) {
     const res = await api('/api/projects/' + currentProjectId + '/timeline/' + recordId, {
       method: 'DELETE'
     });
+
+    if (res._dataVersionConflict) {
+      handleTimelineConflict(res, {
+        pageLabel: "删除时间线记录",
+        onRetry: async function() {
+          try {
+            currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
+            currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
+            const retryRes = await api('/api/projects/' + currentProjectId + '/timeline/' + recordId, {
+              method: 'DELETE'
+            });
+            if (!retryRes._dataVersionConflict && !retryRes.error) {
+              try { availableMaterials = await api('/api/materials'); } catch {}
+              currentRecords = await api('/api/projects/' + currentProjectId + '/timeline');
+              currentRecords = window.Timeline.mergeRecordsWithDrafts(currentRecords || []);
+              _timelineRenderList();
+              if (typeof window.onTimelineUpdated === 'function') {
+                window.onTimelineUpdated(currentProjectId, currentRecords);
+              }
+              if (typeof window._syncPanel !== 'undefined' && window._syncPanel) {
+                window._syncPanel.refresh();
+              }
+              _timelineShowAlert('记录已删除，材料库存已恢复', false);
+            }
+          } catch (e) {
+            _timelineShowAlert(e.message || '重试失败', true);
+          }
+        }
+      });
+      return;
+    }
 
     if (res._savedAsDraft) {
       _timelineShowAlert('网络不可用，删除已保存为本地草稿，联网后可在同步管理中上传', false);
