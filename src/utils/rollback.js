@@ -1,5 +1,5 @@
 import { getAuditLogById, recordAudit, ACTION_TYPES, SOURCES } from "./audit.js";
-import { TRACKED_FIELDS, deepClone, computeDiff, isMeaningfulChange } from "./diff.js";
+import { TRACKED_FIELDS, COMPLEX_FIELDS, deepClone, deepEqual, computeDiff, isMeaningfulChange } from "./diff.js";
 
 const ROLLBACK_VALID_STATUSES = ["进行中", "待复核", "已完成"];
 
@@ -120,6 +120,25 @@ function summarizeTemplateSnapshot(snapshot) {
   };
 }
 
+function getDefaultForComplexField(field) {
+  switch (field) {
+    case "reviewRecords":
+    case "timelineRecords":
+      return [];
+    case "photoArchive":
+      return { before: [], during: [], after: [] };
+    case "templateSnapshot":
+      return null;
+    default:
+      return null;
+  }
+}
+
+function normalizeComplexValue(field, value) {
+  if (value !== null && value !== undefined) return value;
+  return getDefaultForComplexField(field);
+}
+
 function computeFieldLevelChanges(project, targetState) {
   const allChanges = computeDiff(project, targetState);
   const scalarFields = ["title", "era", "damage", "steps", "materials", "owner", "dueDate", "status", "photos"];
@@ -134,25 +153,28 @@ function computeRollbackPreview(project, targetLog) {
   const targetState = targetLog.afterState;
   const fieldChanges = computeFieldLevelChanges(project, targetState);
 
+  const normalizedTarget = {
+    reviewRecords: normalizeComplexValue("reviewRecords", targetState.reviewRecords),
+    timelineRecords: normalizeComplexValue("timelineRecords", targetState.timelineRecords),
+    photoArchive: normalizeComplexValue("photoArchive", targetState.photoArchive),
+    templateSnapshot: normalizeComplexValue("templateSnapshot", targetState.templateSnapshot)
+  };
+
   const currentReviewSummary = summarizeReviewRecords(project.reviewRecords);
-  const targetReviewSummary = summarizeReviewRecords(targetState.reviewRecords);
-  const reviewRecordsWillChange = JSON.stringify(currentReviewSummary.items) !== JSON.stringify(targetReviewSummary.items)
-    || currentReviewSummary.count !== targetReviewSummary.count;
+  const targetReviewSummary = summarizeReviewRecords(normalizedTarget.reviewRecords);
+  const reviewRecordsWillChange = !deepEqual(project.reviewRecords, normalizedTarget.reviewRecords);
 
   const currentTimelineSummary = summarizeTimelineRecords(project.timelineRecords);
-  const targetTimelineSummary = summarizeTimelineRecords(targetState.timelineRecords);
-  const timelineWillChange = currentTimelineSummary.count !== targetTimelineSummary.count;
+  const targetTimelineSummary = summarizeTimelineRecords(normalizedTarget.timelineRecords);
+  const timelineWillChange = !deepEqual(project.timelineRecords, normalizedTarget.timelineRecords);
 
   const currentPhotoSummary = summarizePhotoArchive(project.photoArchive);
-  const targetPhotoSummary = summarizePhotoArchive(targetState.photoArchive);
-  const photosWillChange = currentPhotoSummary.total !== targetPhotoSummary.total
-    || currentPhotoSummary.before !== targetPhotoSummary.before
-    || currentPhotoSummary.during !== targetPhotoSummary.during
-    || currentPhotoSummary.after !== targetPhotoSummary.after;
+  const targetPhotoSummary = summarizePhotoArchive(normalizedTarget.photoArchive);
+  const photosWillChange = !deepEqual(project.photoArchive, normalizedTarget.photoArchive);
 
   const currentTemplateSummary = summarizeTemplateSnapshot(project.templateSnapshot);
-  const targetTemplateSummary = summarizeTemplateSnapshot(targetState.templateSnapshot);
-  const templateWillChange = currentTemplateSummary.summary !== targetTemplateSummary.summary;
+  const targetTemplateSummary = summarizeTemplateSnapshot(normalizedTarget.templateSnapshot);
+  const templateWillChange = !deepEqual(project.templateSnapshot, normalizedTarget.templateSnapshot);
 
   const hasChanges = isMeaningfulChange(fieldChanges)
     || reviewRecordsWillChange
@@ -204,17 +226,43 @@ function applyRollback(db, projectId, targetLogId, operator, operatorId, reason)
   const targetState = targetLog.afterState;
 
   const beforeState = deepClone(project);
+  const changedFields = [];
 
   for (const field of TRACKED_FIELDS) {
-    if (field in targetState) {
-      if (field === "status") {
-        if (ROLLBACK_VALID_STATUSES.includes(targetState[field])) {
-          project[field] = targetState[field];
-        }
-      } else {
-        project[field] = targetState[field];
-      }
+    if (!(field in targetState)) continue;
+
+    const currentVal = project[field];
+    let targetVal = targetState[field];
+
+    if (COMPLEX_FIELDS.includes(field)) {
+      targetVal = normalizeComplexValue(field, targetVal);
     }
+
+    let hasChange = false;
+    if (COMPLEX_FIELDS.includes(field)) {
+      hasChange = !deepEqual(currentVal, targetVal);
+    } else {
+      hasChange = currentVal !== targetVal;
+    }
+
+    if (!hasChange) continue;
+
+    if (field === "status") {
+      if (ROLLBACK_VALID_STATUSES.includes(targetVal)) {
+        project[field] = targetVal;
+        changedFields.push(field);
+      }
+    } else {
+      project[field] = targetVal;
+      changedFields.push(field);
+    }
+  }
+
+  if (changedFields.length === 0) {
+    return {
+      success: false,
+      errors: ["当前状态与目标状态一致，无需回滚"]
+    };
   }
 
   project.updatedAt = new Date().toISOString().slice(0, 10);
@@ -242,14 +290,16 @@ function applyRollback(db, projectId, targetLogId, operator, operatorId, reason)
     sourceLogAction: targetLog.actionLabel,
     sourceLogOperator: targetLog.operator,
     sourceLogTimestamp: targetLog.timestamp,
-    targetLogId: rollbackLog.id
+    targetLogId: rollbackLog.id,
+    changedFields
   };
 
   return {
     success: true,
     project,
     rollbackLog,
-    targetLog
+    targetLog,
+    changedFields
   };
 }
 

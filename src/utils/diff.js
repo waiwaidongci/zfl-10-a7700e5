@@ -40,6 +40,36 @@ function deepClone(obj) {
   return cloned;
 }
 
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null || a === undefined || b === undefined) return false;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== "object") return a === b;
+
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+
+  if (Array.isArray(a)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  const keysA = Object.keys(a).sort();
+  const keysB = Object.keys(b).sort();
+  if (keysA.length !== keysB.length) return false;
+
+  for (let i = 0; i < keysA.length; i++) {
+    if (keysA[i] !== keysB[i]) return false;
+    if (!deepEqual(a[keysA[i]], b[keysB[i]])) return false;
+  }
+
+  return true;
+}
+
+const COMPLEX_FIELDS = ["reviewRecords", "timelineRecords", "photoArchive", "templateSnapshot"];
+
 function extractTrackedFields(obj) {
   const result = {};
   for (const field of TRACKED_FIELDS) {
@@ -50,7 +80,7 @@ function extractTrackedFields(obj) {
   return result;
 }
 
-function computeDiff(before, after) {
+function computeDiff(before, after, includeComplex = false) {
   const changes = [];
   const beforeTracked = extractTrackedFields(before || {});
   const afterTracked = extractTrackedFields(after || {});
@@ -64,29 +94,41 @@ function computeDiff(before, after) {
 
     if (oldIsUndefined && newIsUndefined) continue;
 
+    const isComplex = COMPLEX_FIELDS.includes(field);
+
+    if (!includeComplex && isComplex) continue;
+
+    let hasChange = false;
+
     if (oldIsUndefined && !newIsUndefined) {
-      changes.push({
-        field,
-        label: FIELD_LABELS[field] || field,
-        oldValue: null,
-        newValue: newVal,
-        type: "add"
-      });
+      hasChange = true;
     } else if (!oldIsUndefined && newIsUndefined) {
+      hasChange = true;
+    } else if (isComplex) {
+      hasChange = !deepEqual(oldVal, newVal);
+    } else {
+      hasChange = oldVal !== newVal;
+    }
+
+    if (hasChange) {
+      let type = "modify";
+      let oldValue = oldVal;
+      let newValue = newVal;
+
+      if (oldIsUndefined && !newIsUndefined) {
+        type = "add";
+        oldValue = null;
+      } else if (!oldIsUndefined && newIsUndefined) {
+        type = "remove";
+        newValue = null;
+      }
+
       changes.push({
         field,
         label: FIELD_LABELS[field] || field,
-        oldValue: oldVal,
-        newValue: null,
-        type: "remove"
-      });
-    } else if (oldVal !== newVal) {
-      changes.push({
-        field,
-        label: FIELD_LABELS[field] || field,
-        oldValue: oldVal,
-        newValue: newVal,
-        type: "modify"
+        oldValue,
+        newValue,
+        type
       });
     }
   }
@@ -117,7 +159,9 @@ function isMeaningfulChange(changes) {
 export {
   TRACKED_FIELDS,
   FIELD_LABELS,
+  COMPLEX_FIELDS,
   deepClone,
+  deepEqual,
   extractTrackedFields,
   computeDiff,
   formatChangeSummary,

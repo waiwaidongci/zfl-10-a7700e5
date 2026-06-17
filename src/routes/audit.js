@@ -82,7 +82,8 @@ async function handleListLogs(req, res, db, projectId, viewer) {
         sourceLogId: log.rollbackMeta.sourceLogId || "",
         sourceLogAction: log.rollbackMeta.sourceLogAction || "",
         sourceLogOperator: log.rollbackMeta.sourceLogOperator || "",
-        sourceLogTimestamp: log.rollbackMeta.sourceLogTimestamp || ""
+        sourceLogTimestamp: log.rollbackMeta.sourceLogTimestamp || "",
+        changedFields: log.rollbackMeta.changedFields || []
       };
     }
     if (log.actionType === "rollback" && log.relatedId) {
