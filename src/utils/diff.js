@@ -140,9 +140,32 @@ function formatChangeSummary(changes) {
   if (!changes || changes.length === 0) return "无变更";
   if (changes.length === 1) {
     const c = changes[0];
-    return `${c.label}：${truncate(c.oldValue, 20)} → ${truncate(c.newValue, 20)}`;
+    return `${c.label}：${formatValueForSummary(c.field, c.oldValue, 20)} → ${formatValueForSummary(c.field, c.newValue, 20)}`;
   }
   return `${changes.length} 个字段变更：${changes.map(c => c.label).join("、")}`;
+}
+
+function formatValueForSummary(field, value, maxLen) {
+  if (field === "reviewRecords" || field === "timelineRecords") {
+    return Array.isArray(value) ? `${value.length} 条` : "(空)";
+  }
+
+  if (field === "photoArchive") {
+    if (!value || typeof value !== "object") return "(空)";
+    const before = Array.isArray(value.before) ? value.before.length : 0;
+    const during = Array.isArray(value.during) ? value.during.length : 0;
+    const after = Array.isArray(value.after) ? value.after.length : 0;
+    return `前${before}张/中${during}张/后${after}张`;
+  }
+
+  if (field === "templateSnapshot") {
+    if (!value || typeof value !== "object") return "(空)";
+    const name = value.templateName || "未知模板";
+    const version = value.templateVersion || 0;
+    return truncate(`${name} v${version}`, maxLen);
+  }
+
+  return truncate(value, maxLen);
 }
 
 function truncate(str, maxLen) {
@@ -165,6 +188,7 @@ export {
   extractTrackedFields,
   computeDiff,
   formatChangeSummary,
+  formatValueForSummary,
   truncate,
   isMeaningfulChange
 };

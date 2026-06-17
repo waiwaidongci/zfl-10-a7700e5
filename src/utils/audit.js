@@ -51,7 +51,7 @@ function createAuditLog({
   note = "",
   relatedId = null
 }) {
-  const changes = computeDiff(beforeState, afterState);
+  const changes = computeDiff(beforeState, afterState, true);
   const summary = isMeaningfulChange(changes) ? formatChangeSummary(changes) : "项目创建";
 
   return {
