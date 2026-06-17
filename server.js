@@ -152,7 +152,7 @@ function requiresDataVersion(method, pathname) {
   if (pathname === "/api/intakes") return true;
   if (pathname === "/api/materials") return true;
   if (pathname === "/api/templates") return true;
-  if (/^\/api\/projects\/[^/]+\/(timeline|photos|review|reports\/snapshots|sync-template|rollback)$/.test(pathname)) return true;
+  if (/^\/api\/projects\/[^/]+\/(timeline|photos|review|report-snapshots|sync-template|rollback)$/.test(pathname)) return true;
   if (pathname === "/api/sync/drafts") return true;
   if (pathname === "/api/sync/queue") return true;
   if (pathname === "/api/sync/execute") return true;

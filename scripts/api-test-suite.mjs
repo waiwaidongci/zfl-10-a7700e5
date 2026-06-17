@@ -240,6 +240,19 @@ async function testWriteMissingDataVersion() {
     fail("POST /api/templates 缺少 X-Data-Version 返回 400",
          `实际状态 ${postTemplateNoVersion.status}`);
   }
+
+  const postSnapshotNoVersion = await request("POST", "/api/projects/R-001/report-snapshots", {
+    body: { name: "不应创建的快照" },
+    headers: { "x-viewer-id": "u-admin" }
+  });
+  if (postSnapshotNoVersion.status === 400 &&
+      postSnapshotNoVersion.data &&
+      postSnapshotNoVersion.data.error === "missing_data_version") {
+    pass("POST /api/projects/:id/report-snapshots 缺少 X-Data-Version 返回 400");
+  } else {
+    fail("POST /api/projects/:id/report-snapshots 缺少 X-Data-Version 返回 400",
+         `实际状态 ${postSnapshotNoVersion.status}，错误码 ${postSnapshotNoVersion.data?.error}`);
+  }
 }
 
 async function testDataVersionConflict() {
@@ -350,6 +363,96 @@ async function testDataVersionConflict() {
   }
 }
 
+async function testReportSnapshotsVersionCheck() {
+  section("report-snapshots 写接口数据版本校验");
+
+  const initResp = await request("GET", "/api/projects", {
+    headers: { "x-viewer-id": "u-admin" }
+  });
+  let currentVersion = Number(initResp.dataVersionHeader);
+
+  const patchToCompleted = await request("PATCH", "/api/projects/R-001", {
+    body: { status: "已完成", clientVersion: 1 },
+    headers: {
+      "x-viewer-id": "u-admin",
+      "x-data-version": String(currentVersion)
+    }
+  });
+  if (patchToCompleted.status === 200 && patchToCompleted.data && patchToCompleted.data.status === "已完成") {
+    currentVersion = Number(patchToCompleted.dataVersionHeader);
+    pass("先将 R-001 改为已完成状态", `版本号 ${currentVersion}`);
+  } else {
+    fail("先将 R-001 改为已完成状态",
+         `状态 ${patchToCompleted.status}，body=${JSON.stringify(patchToCompleted.data)}`);
+    return;
+  }
+
+  const createSnapshot = await request("POST", "/api/projects/R-001/report-snapshots", {
+    body: { name: "测试快照1" },
+    headers: {
+      "x-viewer-id": "u-admin",
+      "x-data-version": String(currentVersion)
+    }
+  });
+  if (createSnapshot.status === 200 &&
+      createSnapshot.data &&
+      createSnapshot.data.ok === true &&
+      createSnapshot.data.snapshot) {
+    currentVersion = Number(createSnapshot.dataVersionHeader);
+    pass("带正确版本号创建快照成功", `快照 ${createSnapshot.data.snapshot.id}`);
+  } else {
+    fail("带正确版本号创建快照成功",
+         `状态 ${createSnapshot.status}，body=${JSON.stringify(createSnapshot.data)}`);
+    return;
+  }
+
+  const staleSnapshot = await request("POST", "/api/projects/R-001/report-snapshots", {
+    body: { name: "测试快照-过期版本" },
+    headers: {
+      "x-viewer-id": "u-admin",
+      "x-data-version": String(currentVersion - 1)
+    }
+  });
+  if (staleSnapshot.status === 409 &&
+      staleSnapshot.data &&
+      staleSnapshot.data.error === "data_version_conflict") {
+    pass("report-snapshots 过期版本写入返回 409",
+         `客户端 ${staleSnapshot.data.clientDataVersion} vs 服务端 ${staleSnapshot.data.serverDataVersion}`);
+  } else {
+    fail("report-snapshots 过期版本写入返回 409",
+         `状态 ${staleSnapshot.status}，body=${JSON.stringify(staleSnapshot.data)}`);
+  }
+
+  const freshSnapshot = await request("POST", "/api/projects/R-001/report-snapshots", {
+    body: { name: "测试快照2-新版本" },
+    headers: {
+      "x-viewer-id": "u-admin",
+      "x-data-version": String(currentVersion)
+    }
+  });
+  if (freshSnapshot.status === 200 &&
+      freshSnapshot.data &&
+      freshSnapshot.data.ok === true) {
+    pass("report-snapshots 使用最新版本号可继续创建", `快照 ${freshSnapshot.data.snapshot.id}`);
+  } else {
+    fail("report-snapshots 使用最新版本号可继续创建",
+         `状态 ${freshSnapshot.status}，body=${JSON.stringify(freshSnapshot.data)}`);
+  }
+
+  const listResp = await request("GET", "/api/projects/R-001/report-snapshots", {
+    headers: { "x-viewer-id": "u-admin" }
+  });
+  if (listResp.status === 200 &&
+      listResp.data &&
+      Array.isArray(listResp.data.snapshots) &&
+      listResp.data.snapshots.length >= 2) {
+    pass("GET report-snapshots 返回快照列表", `共 ${listResp.data.snapshots.length} 个快照`);
+  } else {
+    fail("GET report-snapshots 返回快照列表",
+         `状态 ${listResp.status}，body=${JSON.stringify(listResp.data)}`);
+  }
+}
+
 function printSummary() {
   const total = results.length;
   const passed = results.filter(r => r.ok).length;
@@ -376,6 +479,7 @@ async function main() {
     await testReadApis();
     await testWriteMissingDataVersion();
     await testDataVersionConflict();
+    await testReportSnapshotsVersionCheck();
     const ok = printSummary();
     exitCode = ok ? 0 : 1;
   } catch (err) {
