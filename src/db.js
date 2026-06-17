@@ -5,8 +5,11 @@ import { fileURLToPath } from "node:url";
 import { runMigrations } from "./utils/migrations.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dbPath = join(__dirname, "..", "data", "restoration.json");
-const backupPath = join(__dirname, "..", "data", "restoration.json.backup");
+const defaultDbPath = join(__dirname, "..", "data", "restoration.json");
+const dbPath = process.env.DB_PATH || defaultDbPath;
+const backupDir = dirname(dbPath);
+const dbFileName = dbPath.split(/[\\/]/).pop() || "restoration.json";
+const backupPath = join(backupDir, `${dbFileName}.backup`);
 const maxBackups = 5;
 
 async function createBackup() {
@@ -14,20 +17,19 @@ async function createBackup() {
     if (existsSync(dbPath)) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const timestampedBackup = join(
-        __dirname,
-        "..",
-        "data",
-        `restoration.json.backup-${timestamp}`
+        backupDir,
+        `${dbFileName}.backup-${timestamp}`
       );
+      await mkdir(backupDir, { recursive: true });
       await copyFile(dbPath, timestampedBackup);
 
       const backups = [];
-      const dataDir = dirname(dbPath);
+      const prefix = `${dbFileName}.backup-`;
       const fs = await import("node:fs");
-      const files = fs.readdirSync(dataDir);
+      const files = fs.readdirSync(backupDir);
       for (const file of files) {
-        if (file.startsWith("restoration.json.backup-")) {
-          const fullPath = join(dataDir, file);
+        if (file.startsWith(prefix)) {
+          const fullPath = join(backupDir, file);
           const stat = fs.statSync(fullPath);
           backups.push({ path: fullPath, mtime: stat.mtime });
         }

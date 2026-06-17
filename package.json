@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test:schedule": "node --test scripts/test-scheduling.mjs"
+    "test": "node scripts/api-test-suite.mjs",
+    "test:api": "node scripts/api-test-suite.mjs",
+    "test:schedule": "node --test scripts/test-scheduling.mjs",
+    "test:all": "node scripts/api-test-suite.mjs && node --test scripts/test-scheduling.mjs",
+    "start:test": "node scripts/run-test-server.mjs"
   }
 }
