@@ -199,11 +199,11 @@ export async function handleSchedule(req, res, db, pathname) {
     const viewer = getViewer(db, viewerId);
     if (!viewer) return sendJson(res, 401, { error: "unauthorized", message: "请先登录" });
 
-    const conflicts = detectConflicts(db.projects, db.templates, db.materials);
+    const visibleProjects = viewer.role === "admin"
+      ? db.projects
+      : db.projects.filter(p => p.owner === viewer.name);
 
-    const filteredConflicts = viewer.role === "admin"
-      ? conflicts
-      : conflicts.filter(c => c.worker === viewer.name || c.projectId);
+    const filteredConflicts = detectConflicts(visibleProjects, db.templates, db.materials);
 
     return sendJson(res, 200, {
       conflicts: filteredConflicts,
