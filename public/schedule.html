@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>修复人员排程视图 - 古籍修复工作室</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>古籍修复工作室</h1>
+      <div class="meta">修复人员排程视图 · 按工作负载智能排程</div>
+    </div>
+    <select id="viewer"></select>
+  </header>
+  <nav class="tabs" style="padding: 0 28px;">
+    <a href="/">修复项目</a>
+    <a href="/intakes.html">入库接收登记</a>
+    <a href="/materials.html">材料库存台账</a>
+    <a href="/templates.html">修复流程模板</a>
+    <a href="/review.html">复核清单</a>
+    <a href="/calendar.html">排期日历</a>
+    <a href="/schedule.html" class="active">智能排程</a>
+  </nav>
+  <main class="schedule-main">
+    <section class="schedule-controls">
+      <div class="schedule-stats" id="scheduleStats"></div>
+      <div class="schedule-toolbar">
+        <label>显示周数
+          <select id="weeksSelect">
+            <option value="2">2 周</option>
+            <option value="4">4 周</option>
+            <option value="6" selected>6 周</option>
+            <option value="8">8 周</option>
+          </select>
+        </label>
+        <button id="refreshBtn" class="secondary">刷新排程</button>
+        <button id="conflictsBtn" class="secondary">冲突预警 (<span id="conflictCount">0</span>)</button>
+      </div>
+      <div class="schedule-legend">
+        <span class="legend-item"><span class="legend-dot active"></span>进行中</span>
+        <span class="legend-item"><span class="legend-dot pending"></span>待复核</span>
+        <span class="legend-item"><span class="legend-dot overdue"></span>逾期</span>
+        <span class="legend-item"><span class="legend-dot done"></span>已完成</span>
+        <span class="legend-item"><span class="legend-dot blocked"></span>阻塞</span>
+        <span class="legend-item"><span class="legend-dot overload"></span>超载</span>
+      </div>
+    </section>
+
+    <section class="conflicts-panel" id="conflictsPanel" style="display: none;">
+      <div class="conflicts-header">
+        <h3>冲突与风险预警</h3>
+        <button id="closeConflicts" class="secondary">关闭</button>
+      </div>
+      <div class="conflicts-list" id="conflictsList"></div>
+    </section>
+
+    <section class="schedule-container" id="scheduleContainer"></section>
+  </main>
+
+  <div id="adjustModal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>调整排程</h3>
+        <button class="modal-close" id="closeAdjustModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="adjustProjectInfo" class="adjust-project-info"></div>
+        <div id="adjustWarnings" class="adjust-warnings"></div>
+        <div class="adjust-form">
+          <label>调整负责人
+            <select id="adjustOwnerSelect"></select>
+          </label>
+          <label>调整截止日期
+            <input type="date" id="adjustDueDate">
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary" id="cancelAdjust">取消</button>
+        <button class="danger" id="confirmAdjust">确认调整</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>确认排程调整</h3>
+        <button class="modal-close" id="closeConfirmModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="confirm-warnings" id="confirmWarnings"></div>
+        <p>是否仍要继续调整？</p>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary" id="cancelConfirm">返回修改</button>
+        <button class="danger" id="forceAdjust">强制调整</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/components/DataVersionConflictHandler.js"></script>
+  <script src="/js/schedule.js"></script>
+</body>
+</html>

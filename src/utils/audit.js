@@ -25,7 +25,8 @@ const SOURCES = {
   SYSTEM: "system",
   REVIEW: "review",
   ROLLBACK: "rollback",
-  SYNC: "sync"
+  SYNC: "sync",
+  SCHEDULE: "schedule"
 };
 
 function generateAuditId() {

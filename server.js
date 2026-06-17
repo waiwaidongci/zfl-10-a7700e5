@@ -18,6 +18,7 @@ import { handleReports } from "./src/routes/reports.js";
 import { handleTemplates } from "./src/routes/templates.js";
 import { handleAudit } from "./src/routes/audit.js";
 import { handleSync } from "./src/routes/sync.js";
+import { handleSchedule } from "./src/routes/schedule.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "public");
@@ -112,6 +113,10 @@ const server = http.createServer(async (req, res) => {
         const handled = await handleTemplates(req, res, db, pathname);
         if (handled !== false) return;
       }
+      if (pathname.startsWith("/api/schedule")) {
+        const handled = await handleSchedule(req, res, db, pathname);
+        if (handled !== false) return;
+      }
       return sendJson(res, 404, { error: "not_found" });
     }
 
@@ -152,6 +157,7 @@ function requiresDataVersion(method, pathname) {
   if (pathname === "/api/sync/queue") return true;
   if (pathname === "/api/sync/execute") return true;
   if (pathname === "/api/sync/simulate-failure") return true;
+  if (pathname.startsWith("/api/schedule") && method !== "GET") return true;
 
   return false;
 }

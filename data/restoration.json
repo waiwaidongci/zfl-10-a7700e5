@@ -41,8 +41,8 @@
     {
       "id": "R-1781510220362",
       "status": "进行中",
-      "updatedAt": "2026-06-16",
-      "version": 1,
+      "updatedAt": "2026-06-17",
+      "version": 2,
       "reviewRecords": [],
       "timelineRecords": [],
       "photoArchive": {
@@ -56,8 +56,8 @@
       "damage": "测试破损",
       "steps": "测试步骤",
       "materials": "测试材料",
-      "owner": "顾眉",
-      "dueDate": "2026-07-01"
+      "owner": "严澈",
+      "dueDate": "2026-07-10"
     },
     {
       "id": "R-1781488785089",
@@ -1126,6 +1126,71 @@
     ]
   },
   "auditLogs": [
+    {
+      "id": "AUD-1781670435553-4ldw4b",
+      "projectId": "R-1781510220362",
+      "actionType": "project_update",
+      "actionLabel": "修改项目",
+      "operator": "管理员",
+      "operatorId": "u-admin",
+      "source": "schedule",
+      "timestamp": "2026-06-17T04:27:15.553Z",
+      "beforeState": {
+        "title": "测试从入库创建",
+        "era": "宋代",
+        "damage": "测试破损",
+        "steps": "测试步骤",
+        "materials": "测试材料",
+        "owner": "顾眉",
+        "dueDate": "2026-07-01",
+        "status": "进行中",
+        "reviewRecords": [],
+        "timelineRecords": [],
+        "photoArchive": {
+          "before": [],
+          "during": [],
+          "after": []
+        },
+        "templateSnapshot": null
+      },
+      "afterState": {
+        "title": "测试从入库创建",
+        "era": "宋代",
+        "damage": "测试破损",
+        "steps": "测试步骤",
+        "materials": "测试材料",
+        "owner": "严澈",
+        "dueDate": "2026-07-10",
+        "status": "进行中",
+        "reviewRecords": [],
+        "timelineRecords": [],
+        "photoArchive": {
+          "before": [],
+          "during": [],
+          "after": []
+        },
+        "templateSnapshot": null
+      },
+      "changes": [
+        {
+          "field": "owner",
+          "label": "负责人",
+          "oldValue": "顾眉",
+          "newValue": "严澈",
+          "type": "modify"
+        },
+        {
+          "field": "dueDate",
+          "label": "预计完成日期",
+          "oldValue": "2026-07-01",
+          "newValue": "2026-07-10",
+          "type": "modify"
+        }
+      ],
+      "summary": "2 个字段变更：负责人、预计完成日期",
+      "note": "排程调整：2 个字段变更：负责人、预计完成日期",
+      "relatedId": null
+    },
     {
       "id": "AUD-1781660650885-4vyise",
       "projectId": "R-1781488785089",
@@ -2497,6 +2562,6 @@
       }
     }
   ],
-  "_dataVersion": 5,
-  "_clientDataVersion": 4
+  "_dataVersion": 6,
+  "_clientDataVersion": 5
 }
