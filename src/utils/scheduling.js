@@ -458,22 +458,28 @@ export function calculateSchedule(db, viewerId, weeksCount = 6) {
   const rangeStart = getWeekStart(today);
   const rangeEnd = addDays(rangeStart, weeksCount * 7 - 1);
 
-  const viewers = db.users;
-  const projects = db.projects;
+  const users = db.users;
+  const allProjects = db.projects;
   const templates = db.templates;
   const materials = db.materials;
 
-  const viewer = db.users.find(u => u.id === viewerId);
+  const viewer = users.find(u => u.id === viewerId);
   const isAdmin = viewer && viewer.role === "admin";
 
-  let visibleWorkers = viewers;
+  let visibleWorkers = users;
   if (!isAdmin) {
-    visibleWorkers = viewers.filter(u => u.id === viewerId);
+    visibleWorkers = users.filter(u => u.id === viewerId);
+  }
+  const visibleWorkerNames = visibleWorkers.filter(w => w.role === "worker").map(w => w.name);
+
+  let projects = allProjects;
+  if (!isAdmin) {
+    projects = allProjects.filter(p => visibleWorkerNames.includes(p.owner));
   }
 
   const workerSchedules = {};
   for (const worker of visibleWorkers) {
-    if (worker.role === "worker" || (isAdmin && worker.role === "worker")) {
+    if (worker.role === "worker") {
       workerSchedules[worker.id] = generateWorkloadForWorker(
         worker.name,
         projects,
@@ -486,7 +492,18 @@ export function calculateSchedule(db, viewerId, weeksCount = 6) {
     }
   }
 
-  const conflicts = detectConflicts(projects, templates, materials);
+  const allConflicts = detectConflicts(projects, templates, materials);
+  let conflicts = allConflicts;
+  if (!isAdmin) {
+    conflicts = allConflicts.filter(c => {
+      if (c.worker) return visibleWorkerNames.includes(c.worker);
+      if (c.projectId) {
+        const proj = projects.find(p => p.id === c.projectId);
+        return proj ? visibleWorkerNames.includes(proj.owner) : false;
+      }
+      return true;
+    });
+  }
 
   const globalStats = {
     totalWorkers: Object.keys(workerSchedules).length,
