@@ -61,7 +61,7 @@ const server = http.createServer(async (req, res) => {
 
     const writeMethods = ["POST", "PATCH", "PUT", "DELETE"];
     const hasVersionHeader = req.headers["x-data-version"] !== undefined;
-    if (writeMethods.includes(req.method) && !hasVersionHeader) {
+    if (writeMethods.includes(req.method) && requiresDataVersion(req.method, pathname) && !hasVersionHeader) {
       sendJson(res, 400, {
         error: "missing_data_version",
         message: "写操作必须携带 X-Data-Version 请求头"
@@ -134,6 +134,27 @@ const server = http.createServer(async (req, res) => {
     }
   }
 });
+
+function requiresDataVersion(method, pathname) {
+  if (pathname === "/api/projects/apply-template") return false;
+  if (/^\/api\/projects\/[^/]+\/rollback-preview$/.test(pathname)) return false;
+  if (pathname === "/api/sync/detect-conflicts") return false;
+
+  if (method === "PATCH" || method === "PUT" || method === "DELETE") return true;
+
+  if (method !== "POST") return false;
+  if (pathname === "/api/projects") return true;
+  if (pathname === "/api/intakes") return true;
+  if (pathname === "/api/materials") return true;
+  if (pathname === "/api/templates") return true;
+  if (/^\/api\/projects\/[^/]+\/(timeline|photos|review|reports\/snapshots|sync-template|rollback)$/.test(pathname)) return true;
+  if (pathname === "/api/sync/drafts") return true;
+  if (pathname === "/api/sync/queue") return true;
+  if (pathname === "/api/sync/execute") return true;
+  if (pathname === "/api/sync/simulate-failure") return true;
+
+  return false;
+}
 
 server.listen(port, () => {
   console.log(`Restoration studio app listening on http://localhost:${port}`);

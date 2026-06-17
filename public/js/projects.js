@@ -386,7 +386,27 @@ function initDetailView(projectId) {
       editable: true,
       isAdmin: isAdmin,
       onStatusChange: async (pid, newStatus) => {
-        await api('/api/projects/' + pid, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+        const result = await api('/api/projects/' + pid, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+        if (result._dataVersionConflict) {
+          handleDataVersionConflict(result, {
+            pageLabel: "项目详情状态",
+            formData: { projectId: pid, status: newStatus },
+            onRetry: async () => {
+              await load();
+              const updatedProject = projects.find(p => p.id === pid);
+              if (updatedProject) {
+                const retryResult = await api('/api/projects/' + pid, {
+                  method: 'PATCH',
+                  body: JSON.stringify({ status: newStatus })
+                });
+                if (!retryResult._dataVersionConflict && !retryResult.error) {
+                  await load();
+                }
+              }
+            }
+          });
+          return;
+        }
         await load();
       },
       onOpenPhotos: (project) => {
